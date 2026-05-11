@@ -51,6 +51,11 @@ void update_canvas_colors() {
     canvas.setTextColor(1, 0);
 }
 
+void apply_canvas_font_size() {
+    canvas.setTextSize(current_options.font_size);
+    display_dirty = true;
+}
+
 void console_output_char(char c) {
     if (c == 0) return;
     
@@ -211,6 +216,7 @@ void setup() {
     canvas.createSprite(240, 135);
     canvas.setTextScroll(true);
     canvas.setFont(&fonts::Font0);  // 6×8 mono → ~39 col × 16 rows
+    apply_canvas_font_size();
     update_canvas_colors();
     canvas.fillSprite(0);
     canvas.pushSprite(0, 0);

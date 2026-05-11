@@ -28,6 +28,7 @@ struct EmulatorOptions {
     CpuModel cpu_model;
     BootDevice boot_device;
     bool led_enabled;
+    int font_size;
 };
 
 extern EmulatorOptions current_options;

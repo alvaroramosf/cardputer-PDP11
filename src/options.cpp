@@ -27,6 +27,7 @@ void loadOptions() {
     current_options.cpu_model   = (CpuModel)preferences.getInt("cpu_model", CPU_PDP1140);
     current_options.boot_device = (BootDevice)preferences.getInt("boot_device", BOOT_RK);
     current_options.led_enabled = preferences.getBool("led_enabled", true);
+    current_options.font_size   = preferences.getInt("font_size", 1);
     preferences.end();
 }
 
@@ -44,6 +45,7 @@ void saveOptions() {
     preferences.putInt("cpu_model",  current_options.cpu_model);
     preferences.putInt("boot_device", current_options.boot_device);
     preferences.putBool("led_enabled", current_options.led_enabled);
+    preferences.putInt("font_size", current_options.font_size);
     preferences.end();
 }
 
@@ -51,6 +53,8 @@ void applyOptions() {
     M5Cardputer.Display.setBrightness(current_options.brightness);
     extern void update_canvas_colors();
     update_canvas_colors();
+    extern void apply_canvas_font_size();
+    apply_canvas_font_size();
 }
 
 static void waitForKeyRelease() {
@@ -359,6 +363,50 @@ static void menuBrightness() {
             if (status.enter) {
                 current_options.brightness = bvals[sel];
                 M5Cardputer.Display.setBrightness(bvals[sel]); // apply immediately
+                waitForKeyRelease();
+                return;
+            }
+            bool esc_pressed = status.del;
+            for (auto ch : status.word) {
+                if (ch == 27 || ch == '`') esc_pressed = true;
+            }
+            if (esc_pressed) {
+                waitForKeyRelease();
+                return;
+            }
+        }
+        delay(20);
+    }
+}
+
+static void menuFontSize() {
+    int sel = current_options.font_size == 1 ? 0 : 1;
+    const char* items[] = {"Normal (1x)", "Large (2x)"};
+    bool redraw = true;
+    while(true) {
+        if (redraw) {
+            drawMenuHeader("Terminal Font Size");
+            drawMenuList(2, sel, items, current_options.font_size == 1 ? 0 : 1);
+            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            redraw = false;
+        }
+        
+        M5Cardputer.update();
+        if (M5Cardputer.BtnA.wasPressed() || request_soft_reset) {
+            request_soft_reset = true;
+            return;
+        }
+        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+            auto status = M5Cardputer.Keyboard.keysState();
+            for (auto ch : status.word) {
+                if (ch == ';') { if (sel > 0) { sel--; redraw = true; } }
+                if (ch == '.') { if (sel < 1) { sel++; redraw = true; } }
+            }
+            if (status.enter) {
+                current_options.font_size = (sel == 0) ? 1 : 2;
+                saveOptions();
+                extern void apply_canvas_font_size();
+                apply_canvas_font_size();
                 waitForKeyRelease();
                 return;
             }
@@ -708,17 +756,18 @@ static void menuEmulationSettings() {
 static void menuCardputerSettings() {
     int sel = 0;
     bool redraw = true;
-    int num_items = 3;
+    int num_items = 4;
     while(true) {
         if (redraw) {
             const char* items[] = {
                 "Text Colour",
                 "Brightness",
+                "Terminal Font Size",
                 "Disk Activity LED",
                 "Battery Status"
             };
             drawMenuHeader("Cardputer Settings");
-            drawMenuList(4, sel, items);
+            drawMenuList(5, sel, items);
             drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
             redraw = false;
         }
@@ -732,7 +781,7 @@ static void menuCardputerSettings() {
             auto status = M5Cardputer.Keyboard.keysState();
             bool handled = false;
             bool esc_pressed = status.del;
-            int num_items = 4;
+            int num_items = 5;
             for (auto ch : status.word) {
                 if (ch == ';') { if (sel > 0) { sel--; redraw = true; handled = true; } }
                 if (ch == '.') { if (sel < num_items - 1) { sel++; redraw = true; handled = true; } }
@@ -742,8 +791,9 @@ static void menuCardputerSettings() {
                 switch(sel) {
                     case 0: menuTerminalColor(); break;
                     case 1: menuBrightness(); break;
-                    case 2: menuDiskLED(); break;
-                    case 3: menuBattery(); break;
+                    case 2: menuFontSize(); break;
+                    case 3: menuDiskLED(); break;
+                    case 4: menuBattery(); break;
                 }
                 redraw = true;
             }
