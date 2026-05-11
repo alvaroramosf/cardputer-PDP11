@@ -228,7 +228,7 @@ static void menuSelectDisk(int* target_disk_idx, const char* title) {
             }
             
             drawMenuList(vCount, sel, items, activeIdx);
-            drawMenuFooter("; Up  . Down  Enter Open/Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Open/Sel  Esc Back");
             redraw = false;
         }
         
@@ -303,7 +303,7 @@ static void menuTerminalColor() {
         if (redraw) {
             drawMenuHeader("Text and Terminal Colour");
             drawMenuList(4, sel, items, current_options.term_color);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Sel  Esc Back");
             redraw = false;
         }
         
@@ -347,7 +347,7 @@ static void menuBrightness() {
         if (redraw) {
             drawMenuHeader("Brightness");
             drawMenuList(5, sel, items, sel);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Sel  Esc Back");
             redraw = false;
         }
         
@@ -389,7 +389,7 @@ static void menuFontSize() {
         if (redraw) {
             drawMenuHeader("Terminal Font Size");
             drawMenuList(2, sel, items, current_options.font_size == 1 ? 0 : 1);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Sel  Esc Back");
             redraw = false;
         }
         
@@ -436,7 +436,7 @@ static void menuCpuModel() {
         if (redraw) {
             drawMenuHeader("CPU Model");
             drawMenuList(2, sel, items, current_options.cpu_model);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Sel  Esc Back");
             redraw = false;
         }
         M5Cardputer.update();
@@ -471,7 +471,7 @@ static void menuBootDevice() {
         if (redraw) {
             drawMenuHeader("Select Boot Device");
             drawMenuList(2, sel, items, (int)current_options.boot_device);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Sel  Esc Back");
             redraw = false;
         }
         M5Cardputer.update();
@@ -504,7 +504,7 @@ static void menuDiskLED() {
         if (redraw) {
             drawMenuHeader("Disk Activity LED");
             drawMenuList(2, sel, items, current_options.led_enabled ? 0 : 1);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Sel  Esc Back");
             redraw = false;
         }
         M5Cardputer.update();
@@ -541,7 +541,7 @@ static void menuRKDrives() {
             const char* items[] = { rk0.c_str(), rk1.c_str(), rk2.c_str(), rk3.c_str() };
             drawMenuHeader("RK05 Drive Config");
             drawMenuList(4, sel, items);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Sel  Esc Back");
             redraw = false;
         }
         M5Cardputer.update();
@@ -578,7 +578,7 @@ static void menuRLDrives() {
             const char* items[] = { rl0.c_str(), rl1.c_str(), rl2.c_str(), rl3.c_str() };
             drawMenuHeader("RL01/02 Drive Config");
             drawMenuList(4, sel, items);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Select  Esc Back");
             redraw = false;
         }
         M5Cardputer.update();
@@ -719,7 +719,7 @@ static void menuEmulationSettings() {
             };
             drawMenuHeader("Emulation Settings");
             drawMenuList(4, sel, items);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Select  Esc Back");
             redraw = false;
         }
         
@@ -770,7 +770,7 @@ static void menuCardputerSettings() {
             };
             drawMenuHeader("Cardputer Settings");
             drawMenuList(5, sel, items);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Select  Esc Back");
             redraw = false;
         }
         
@@ -1048,7 +1048,7 @@ void loadSnapshotMenu() {
             const char* items[30];
             for (int i=0; i<count; i++) items[i] = snapshots[i].c_str();
             drawMenuList(count, sel, items);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            drawMenuFooter("; Up  . Down  Ent Select  Esc Back");
             redraw = false;
         }
 
@@ -1093,7 +1093,7 @@ void openOptionsMenu() {
             
             drawMenuHeader("Main Menu");
             drawMenuList(num_items, sel, items);
-            drawMenuFooter("; Up  . Down  Enter Select  Esc Exit / G0 Save");
+            drawMenuFooter("; Up . Down  Ent Sel  Esc Exit  G0 Save");
             redraw = false;
         }
         
