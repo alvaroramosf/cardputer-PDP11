@@ -7,6 +7,7 @@
 #include "kl11.h"
 #include <stdio.h>
 #include <Arduino.h>
+#include <SD.h>
 
 // ── External references ───────────────────────────────────────────────────────
 extern KB11 cpu;
@@ -127,4 +128,22 @@ void KL11::write16(uint32_t a, uint16_t v) {
     default:
         std::abort();
     }
+}
+
+void KL11::saveSnapshot(File f) {
+    f.write((uint8_t*)&rcsr, sizeof(rcsr));
+    f.write((uint8_t*)&rbuf, sizeof(rbuf));
+    f.write((uint8_t*)&xcsr, sizeof(xcsr));
+    f.write((uint8_t*)&xbuf, sizeof(xbuf));
+    f.write((uint8_t*)&count, sizeof(count));
+    f.write((uint8_t*)&iflag, sizeof(iflag));
+}
+
+void KL11::loadSnapshot(File f) {
+    f.read((uint8_t*)&rcsr, sizeof(rcsr));
+    f.read((uint8_t*)&rbuf, sizeof(rbuf));
+    f.read((uint8_t*)&xcsr, sizeof(xcsr));
+    f.read((uint8_t*)&xbuf, sizeof(xbuf));
+    f.read((uint8_t*)&count, sizeof(count));
+    f.read((uint8_t*)&iflag, sizeof(iflag));
 }

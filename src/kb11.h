@@ -13,6 +13,10 @@ class KB11 {
 
     void trapat(uint16_t vec);
 
+    void saveSnapshot(const char* dir);
+    void loadSnapshot(const char* dir);
+
+
     // interrupt schedules an interrupt.
     void interrupt(uint8_t vec, uint8_t pri);
     void printstate();

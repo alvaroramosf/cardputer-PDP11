@@ -7,6 +7,7 @@
 #include "dl11.h"
 #include <stdio.h>
 #include <Arduino.h>
+#include <SD.h>
 
 extern KB11 cpu;
 
@@ -112,3 +113,22 @@ void DL11::write16(uint32_t a, uint16_t v) {
         trap(INTBUS);
     }
 }
+
+void DL11::saveSnapshot(File f) {
+    f.write((uint8_t*)&rcsr, sizeof(rcsr));
+    f.write((uint8_t*)&rbuf, sizeof(rbuf));
+    f.write((uint8_t*)&xcsr, sizeof(xcsr));
+    f.write((uint8_t*)&xbuf, sizeof(xbuf));
+    f.write((uint8_t*)&count, sizeof(count));
+    f.write((uint8_t*)&iflag, sizeof(iflag));
+}
+
+void DL11::loadSnapshot(File f) {
+    f.read((uint8_t*)&rcsr, sizeof(rcsr));
+    f.read((uint8_t*)&rbuf, sizeof(rbuf));
+    f.read((uint8_t*)&xcsr, sizeof(xcsr));
+    f.read((uint8_t*)&xbuf, sizeof(xbuf));
+    f.read((uint8_t*)&count, sizeof(count));
+    f.read((uint8_t*)&iflag, sizeof(iflag));
+}
+

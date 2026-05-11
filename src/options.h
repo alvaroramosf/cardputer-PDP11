@@ -44,6 +44,7 @@ extern String Fnames[64];
 
 // Notify main that soft reset is requested
 extern bool request_soft_reset;
-extern bool request_soft_reset;
+extern bool request_load_snapshot;
+extern String snapshot_to_load;
 
 #endif // OPTIONS_H

@@ -1,5 +1,8 @@
 #pragma once
 #include <stdint.h>
+#include <FS.h>
+#include <SD.h>
+
 
 class KW11 {
   public:
@@ -8,6 +11,8 @@ class KW11 {
 
     KW11();
     void tick();
+    void saveSnapshot(File f);
+    void loadSnapshot(File f);
 
   private:
     uint16_t csr;

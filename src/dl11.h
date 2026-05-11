@@ -1,5 +1,8 @@
 #pragma once
 #include <stdint.h>
+#include <FS.h>
+#include <SD.h>
+
 
 class DL11 {
 
@@ -12,6 +15,8 @@ class DL11 {
     void write16(uint32_t a, uint16_t v);
 	  void serial_putchar(char c);
 	  char serial_getchar();
+    void saveSnapshot(File f);
+    void loadSnapshot(File f);
 
 
   private:

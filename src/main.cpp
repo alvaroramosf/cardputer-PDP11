@@ -133,6 +133,50 @@ void perform_soft_reset() {
     delay(500); 
 }
 
+void perform_load_snapshot(String dir) {
+    File f_cfg = SD.open((dir + "/config.bin").c_str(), "r");
+    if (f_cfg) {
+        f_cfg.read((uint8_t*)&current_options, sizeof(current_options));
+        f_cfg.close();
+    }
+    
+    M5Cardputer.Display.setBrightness(current_options.brightness);
+    update_canvas_colors();
+    apply_canvas_font_size();
+    
+    for(int i=0; i<4; i++) {
+        if (cpu.unibus.rk11.rk05[i]) { cpu.unibus.rk11.rk05[i].close(); cpu.unibus.rk11.rk05[i] = File(); }
+        if (cpu.unibus.rl11.rl02[i]) { cpu.unibus.rl11.rl02[i].close(); cpu.unibus.rl11.rl02[i] = File(); }
+    }
+    
+    for(int i=0; i<4; i++) {
+        if (current_options.rk_disks[i] >= 0) {
+            String path = "/pdp11/" + Fnames[current_options.rk_disks[i]];
+            cpu.unibus.rk11.rk05[i] = SD.open(path.c_str(), "rb+");
+        }
+        if (current_options.rl_disks[i] >= 0) {
+            String path = "/pdp11/" + Fnames[current_options.rl_disks[i]];
+            cpu.unibus.rl11.rl02[i] = SD.open(path.c_str(), "rb+");
+        }
+    }
+    
+    if (current_options.rl_disks[0] >= 0 && strcasestr(Fnames[current_options.rl_disks[0]].c_str(), ".rl02")) {
+        extern int RLTYPE;
+        RLTYPE = 0235;
+    } else {
+        extern int RLTYPE;
+        RLTYPE = 035;
+    }
+    
+    cpu.loadSnapshot(dir.c_str());
+    
+    canvas.fillSprite(0);
+    canvas.setCursor(0, 0);
+    canvas.printf("[SNAPSHOT LOADED]\r\n");
+    canvas.pushSprite(0, 0);
+    delay(500);
+}
+
 void redraw_terminal() {
     // No-op - we removed the buffer
 }

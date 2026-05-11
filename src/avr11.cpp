@@ -101,6 +101,13 @@ void emulator_loop() {
 
 void emulator_loop0() {
     while (true) {
+        if (request_load_snapshot) {
+            extern void perform_load_snapshot(String dir);
+            perform_load_snapshot(snapshot_to_load);
+            request_load_snapshot = false;
+            request_soft_reset = false;
+        }
+
         if (request_soft_reset) {
             extern void perform_soft_reset();
             perform_soft_reset();

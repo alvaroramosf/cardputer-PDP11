@@ -49,6 +49,8 @@ void step();
 void rlnotready();
 void rlready();
 void loadboot();
+void saveSnapshot(File f);
+void loadSnapshot(File f);
 
 private:
     uint16_t drive, drun;

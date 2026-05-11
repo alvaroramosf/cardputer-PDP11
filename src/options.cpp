@@ -11,6 +11,8 @@ EmulatorOptions current_options;
 Preferences preferences;
 
 bool request_soft_reset = false;
+bool request_load_snapshot = false;
+String snapshot_to_load = "";
 int soft_reset_disk_idx = 0;
 
 void loadOptions() {
@@ -806,19 +808,286 @@ static void menuCardputerSettings() {
     }
 }
 
+void createSnapshot() {
+    SD.mkdir("/snapshots");
+    
+    // Find next snapshot number
+    int snap_idx = 0;
+    String snap_dir;
+    while (true) {
+        snap_dir = String("/snapshots/snap_") + snap_idx;
+        if (!SD.exists(snap_dir.c_str())) {
+            break;
+        }
+        snap_idx++;
+    }
+    SD.mkdir(snap_dir.c_str());
+
+    // Save current options
+    File f_cfg = SD.open((snap_dir + "/config.bin").c_str(), FILE_WRITE);
+    if (f_cfg) {
+        f_cfg.write((uint8_t*)&current_options, sizeof(current_options));
+        f_cfg.close();
+    }
+
+    // Save CPU state
+    extern KB11 cpu;
+    cpu.saveSnapshot(snap_dir.c_str());
+
+    // Show message
+    M5Cardputer.Display.fillRect(0, 135 - 20, 240, 20, TFT_DARKGREEN);
+    M5Cardputer.Display.setTextColor(TFT_WHITE, TFT_DARKGREEN);
+    M5Cardputer.Display.setCursor(4, 135 - 16);
+    M5Cardputer.Display.printf("Snapshot saved: snap_%d", snap_idx);
+    M5Cardputer.update();
+    delay(1500);
+}
+
+void deleteRecursive(const char* path) {
+    File root = SD.open(path);
+    if (!root) return;
+    if (!root.isDirectory()) {
+        root.close();
+        SD.remove(path);
+        return;
+    }
+    while (true) {
+        File entry = root.openNextFile();
+        if (!entry) break;
+        // On ESP32 SD library, entry.name() might be just the basename or full path.
+        // Assuming basename.
+        String entryName = entry.name();
+        String entryPath = String(path);
+        if (!entryPath.endsWith("/")) entryPath += "/";
+        entryPath += entryName;
+        
+        if (entry.isDirectory()) {
+            entry.close();
+            deleteRecursive(entryPath.c_str());
+        } else {
+            entry.close();
+            SD.remove(entryPath.c_str());
+        }
+    }
+    root.close();
+    SD.rmdir(path);
+}
+
+String textInput(const char* title, const char* initial) {
+    String buffer = initial;
+    bool redraw = true;
+    while(true) {
+        if (redraw) {
+            M5Cardputer.Display.fillRect(0, 30, 240, 80, TFT_BLACK);
+            M5Cardputer.Display.drawRect(5, 50, 230, 40, getMenuColor());
+            M5Cardputer.Display.setCursor(10, 40);
+            M5Cardputer.Display.setTextColor(TFT_YELLOW);
+            M5Cardputer.Display.print(title);
+            M5Cardputer.Display.setCursor(10, 65);
+            M5Cardputer.Display.setTextColor(TFT_WHITE);
+            M5Cardputer.Display.setTextSize(2);
+            M5Cardputer.Display.print(buffer);
+            M5Cardputer.Display.print("_");
+            M5Cardputer.Display.setTextSize(1);
+            redraw = false;
+        }
+        M5Cardputer.update();
+        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+            auto status = M5Cardputer.Keyboard.keysState();
+            if (status.del && buffer.length() > 0) {
+                buffer.remove(buffer.length() - 1);
+                redraw = true;
+            }
+            if (status.enter) {
+                waitForKeyRelease();
+                return buffer;
+            }
+            for (auto ch : status.word) {
+                if (ch == 27 || ch == '`') return ""; // Cancel
+                if (ch >= 32 && ch <= 126 && buffer.length() < 24) {
+                    buffer += ch;
+                    redraw = true;
+                }
+            }
+        }
+        delay(20);
+    }
+}
+
+void menuManageSnapshots() {
+    while(true) {
+        File root = SD.open("/snapshots");
+        if (!root) {
+            SD.mkdir("/snapshots");
+            root = SD.open("/snapshots");
+        }
+        
+        String snapshots[40];
+        int count = 0;
+        while (true) {
+            File entry = root.openNextFile();
+            if (!entry) break;
+            if (entry.isDirectory()) {
+                if (count < 40) snapshots[count++] = entry.name();
+            }
+            entry.close();
+        }
+        root.close();
+
+        if (count == 0) {
+            drawMenuHeader("Manage Snapshots");
+            M5Cardputer.Display.setCursor(10, 60);
+            M5Cardputer.Display.setTextColor(TFT_WHITE);
+            M5Cardputer.Display.print("No snapshots found.");
+            M5Cardputer.update();
+            delay(1000);
+            return;
+        }
+
+        int sel = 0;
+        bool redraw = true;
+        while(true) {
+            if (redraw) {
+                drawMenuHeader("Manage Snapshots");
+                const char* items[40];
+                for (int i=0; i<count; i++) items[i] = snapshots[i].c_str();
+                drawMenuList(count, sel, items);
+                drawMenuFooter("Enter: Options  Esc: Back");
+                redraw = false;
+            }
+
+            M5Cardputer.update();
+            if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+                auto status = M5Cardputer.Keyboard.keysState();
+                bool esc_pressed = status.del;
+                for (auto ch : status.word) {
+                    if (ch == ';') { if (sel > 0) { sel--; redraw = true; } }
+                    if (ch == '.') { if (sel < count - 1) { sel++; redraw = true; } }
+                    if (ch == 27 || ch == '`') esc_pressed = true;
+                }
+                if (status.enter) {
+                    waitForKeyRelease();
+                    // Sub-menu for selection
+                    int sub_sel = 0;
+                    bool sub_redraw = true;
+                    const char* sub_items[] = {"Rename", "Delete", "Cancel"};
+                    while(true) {
+                        if (sub_redraw) {
+                            M5Cardputer.Display.fillRect(60, 40, 120, 70, TFT_BLACK);
+                            M5Cardputer.Display.drawRect(60, 40, 120, 70, getMenuColor());
+                            for(int i=0; i<3; i++) {
+                                M5Cardputer.Display.setCursor(70, 50 + i*20);
+                                if (i == sub_sel) M5Cardputer.Display.setTextColor(TFT_YELLOW);
+                                else M5Cardputer.Display.setTextColor(TFT_WHITE);
+                                M5Cardputer.Display.print(sub_items[i]);
+                            }
+                            M5Cardputer.update();
+                            sub_redraw = false;
+                        }
+                        M5Cardputer.update();
+                        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+                            auto s_status = M5Cardputer.Keyboard.keysState();
+                            for (auto ch : s_status.word) {
+                                if (ch == ';') { if (sub_sel > 0) { sub_sel--; sub_redraw = true; } }
+                                if (ch == '.') { if (sub_sel < 2) { sub_sel++; sub_redraw = true; } }
+                            }
+                            if (s_status.enter) {
+                                if (sub_sel == 0) { // Rename
+                                    String oldName = snapshots[sel];
+                                    String newName = textInput("New name:", oldName.c_str());
+                                    if (newName != "" && newName != oldName) {
+                                        SD.rename(("/snapshots/" + oldName).c_str(), ("/snapshots/" + newName).c_str());
+                                    }
+                                    break; // Refresh list
+                                } else if (sub_sel == 1) { // Delete
+                                    deleteRecursive(("/snapshots/" + snapshots[sel]).c_str());
+                                    break; // Refresh list
+                                } else {
+                                    break;
+                                }
+                            }
+                            if (s_status.del) break;
+                        }
+                        delay(20);
+                    }
+                    redraw = true;
+                    break; // Refresh list
+                }
+                if (esc_pressed) return;
+            }
+            delay(20);
+        }
+    }
+}
+
+void loadSnapshotMenu() {
+    File root = SD.open("/snapshots");
+    if (!root) {
+        return;
+    }
+    
+    String snapshots[30];
+    int count = 0;
+    while (true) {
+        File entry = root.openNextFile();
+        if (!entry) break;
+        if (entry.isDirectory() && String(entry.name()).startsWith("snap_")) {
+            if (count < 30) snapshots[count++] = entry.name();
+        }
+        entry.close();
+    }
+    root.close();
+
+    if (count == 0) return;
+
+    int sel = 0;
+    bool redraw = true;
+    while(true) {
+        if (redraw) {
+            drawMenuHeader("Load Snapshot");
+            const char* items[30];
+            for (int i=0; i<count; i++) items[i] = snapshots[i].c_str();
+            drawMenuList(count, sel, items);
+            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            redraw = false;
+        }
+
+        M5Cardputer.update();
+        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+            auto status = M5Cardputer.Keyboard.keysState();
+            bool esc_pressed = status.del;
+            for (auto ch : status.word) {
+                if (ch == ';') { if (sel > 0) { sel--; redraw = true; } }
+                if (ch == '.') { if (sel < count - 1) { sel++; redraw = true; } }
+                if (ch == 27 || ch == '`') esc_pressed = true;
+            }
+            if (status.enter) {
+                snapshot_to_load = String("/snapshots/") + snapshots[sel];
+                request_load_snapshot = true;
+                return;
+            }
+            if (esc_pressed) return;
+        }
+        delay(20);
+    }
+}
+
 // Main Options Menu
 void openOptionsMenu() {
     int sel = 0;
     EmulatorOptions backup = current_options;
     
     bool redraw = true;
-    int num_items = 4;
+    int num_items = 7;
     while(true) {
         if (redraw) {
             const char* items[] = {
                 "Emulation Settings",
                 "Cardputer Settings",
                 "System Info",
+                "Create Snapshot",
+                "Load Snapshot",
+                "Manage Snapshots",
                 "System Reset"
             };
             
@@ -845,15 +1114,18 @@ void openOptionsMenu() {
                     case 0: menuEmulationSettings(); break;
                     case 1: menuCardputerSettings(); break;
                     case 2: menuSystemInfo(); break;
-                    case 3:
+                    case 3: createSnapshot(); break;
+                    case 4: loadSnapshotMenu(); break;
+                    case 5: menuManageSnapshots(); break;
+                    case 6:
                         request_soft_reset = true;
                         waitForKeyRelease();
                         return;
                 }
                 redraw = true;
             }
-            if (esc_pressed || g0_pressed || request_soft_reset) {
-                bool signal_exit = request_soft_reset;
+            if (esc_pressed || g0_pressed || request_soft_reset || request_load_snapshot) {
+                bool signal_exit = request_soft_reset || request_load_snapshot;
                 request_soft_reset = false;
                 saveOptions();
                 applyOptions();

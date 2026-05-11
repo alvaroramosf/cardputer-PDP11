@@ -12,6 +12,8 @@ class RK11 {
     void write16(uint32_t a, uint16_t v);
     void reset();
     void step();
+    void saveSnapshot(File f);
+    void loadSnapshot(File f);
 
   private:
 	uint16_t rkds, rker, rkcs, rkwc, rkba, rkda;

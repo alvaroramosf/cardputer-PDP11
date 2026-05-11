@@ -246,3 +246,35 @@ void RK11::reset() {
     drive = cylinder = surface = sector = 0;
     rkdelay = 0;
 }
+
+void RK11::saveSnapshot(File f) {
+    f.write((uint8_t*)&rkds, sizeof(rkds));
+    f.write((uint8_t*)&rker, sizeof(rker));
+    f.write((uint8_t*)&rkcs, sizeof(rkcs));
+    f.write((uint8_t*)&rkwc, sizeof(rkwc));
+    f.write((uint8_t*)&rkba, sizeof(rkba));
+    f.write((uint8_t*)&rkda, sizeof(rkda));
+    f.write((uint8_t*)&bcnt, sizeof(bcnt));
+    f.write((uint8_t*)&drive, sizeof(drive));
+    f.write((uint8_t*)&sector, sizeof(sector));
+    f.write((uint8_t*)&surface, sizeof(surface));
+    f.write((uint8_t*)&cylinder, sizeof(cylinder));
+    f.write((uint8_t*)&rkba18, sizeof(rkba18));
+    f.write((uint8_t*)&rkdelay, sizeof(rkdelay));
+}
+
+void RK11::loadSnapshot(File f) {
+    f.read((uint8_t*)&rkds, sizeof(rkds));
+    f.read((uint8_t*)&rker, sizeof(rker));
+    f.read((uint8_t*)&rkcs, sizeof(rkcs));
+    f.read((uint8_t*)&rkwc, sizeof(rkwc));
+    f.read((uint8_t*)&rkba, sizeof(rkba));
+    f.read((uint8_t*)&rkda, sizeof(rkda));
+    f.read((uint8_t*)&bcnt, sizeof(bcnt));
+    f.read((uint8_t*)&drive, sizeof(drive));
+    f.read((uint8_t*)&sector, sizeof(sector));
+    f.read((uint8_t*)&surface, sizeof(surface));
+    f.read((uint8_t*)&cylinder, sizeof(cylinder));
+    f.read((uint8_t*)&rkba18, sizeof(rkba18));
+    f.read((uint8_t*)&rkdelay, sizeof(rkdelay));
+}

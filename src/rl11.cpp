@@ -338,3 +338,30 @@ void RL11::reset()
 }
 
 
+void RL11::saveSnapshot(File f) {
+    f.write((uint8_t*)&drive, sizeof(drive));
+    f.write((uint8_t*)&drun, sizeof(drun));
+    f.write((uint8_t*)&RLWC, sizeof(RLWC));
+    f.write((uint8_t*)&RLDA, sizeof(RLDA));
+    f.write((uint8_t*)&RLMP, sizeof(RLMP));
+    f.write((uint8_t*)&RLCS, sizeof(RLCS));
+    f.write((uint8_t*)&RLBAE, sizeof(RLBAE));
+    f.write((uint8_t*)&RLUNIT, sizeof(RLUNIT));
+    f.write((uint8_t*)&RLBA, sizeof(RLBA));
+    f.write((uint8_t*)&RLBA22, sizeof(RLBA22));
+}
+
+void RL11::loadSnapshot(File f) {
+    f.read((uint8_t*)&drive, sizeof(drive));
+    f.read((uint8_t*)&drun, sizeof(drun));
+    f.read((uint8_t*)&RLWC, sizeof(RLWC));
+    f.read((uint8_t*)&RLDA, sizeof(RLDA));
+    f.read((uint8_t*)&RLMP, sizeof(RLMP));
+    f.read((uint8_t*)&RLCS, sizeof(RLCS));
+    f.read((uint8_t*)&RLBAE, sizeof(RLBAE));
+    f.read((uint8_t*)&RLUNIT, sizeof(RLUNIT));
+    f.read((uint8_t*)&RLBA, sizeof(RLBA));
+    f.read((uint8_t*)&RLBA22, sizeof(RLBA22));
+}
+
+

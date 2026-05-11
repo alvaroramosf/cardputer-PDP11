@@ -4,6 +4,7 @@
 #include <iostream>
 #include <signal.h>
 #include <Arduino.h>
+#include <SD.h>
 
 extern KB11 cpu;
 
@@ -44,3 +45,6 @@ void KW11::tick() {
         cpu.interrupt(INTCLOCK, 6);
     }
 }
+
+void KW11::saveSnapshot(File f) { f.write((uint8_t*)&csr, sizeof(csr)); }
+void KW11::loadSnapshot(File f) { f.read((uint8_t*)&csr, sizeof(csr)); }
