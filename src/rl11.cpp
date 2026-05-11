@@ -181,6 +181,11 @@ void RL11::step()
     }
 
 retry:
+    uint16_t cylinder = GET_CYL(RLDA);
+    extern void playDiskSeekSound(int cylinderDist);
+    playDiskSeekSound(abs((int)cylinder - (int)last_cylinder[drive]));
+    last_cylinder[drive] = cylinder;
+
     int32_t pos;
     int32_t maxwc = (RL_NUMSC - GET_SECT(RLDA)) * RL_NUMWD;
     int16_t wc = 0200000 - RLMP;
@@ -335,6 +340,7 @@ void RL11::reset()
     RLMP = 0;
     RLUNIT = 0;
     drun = 0;
+    for(int i=0; i<4; i++) last_cylinder[i] = 0;
 }
 
 
@@ -349,6 +355,7 @@ void RL11::saveSnapshot(File f) {
     f.write((uint8_t*)&RLUNIT, sizeof(RLUNIT));
     f.write((uint8_t*)&RLBA, sizeof(RLBA));
     f.write((uint8_t*)&RLBA22, sizeof(RLBA22));
+    f.write((uint8_t*)last_cylinder, sizeof(last_cylinder));
 }
 
 void RL11::loadSnapshot(File f) {
@@ -362,6 +369,8 @@ void RL11::loadSnapshot(File f) {
     f.read((uint8_t*)&RLUNIT, sizeof(RLUNIT));
     f.read((uint8_t*)&RLBA, sizeof(RLBA));
     f.read((uint8_t*)&RLBA22, sizeof(RLBA22));
+    f.read((uint8_t*)last_cylinder, sizeof(last_cylinder));
 }
+
 
 

@@ -35,6 +35,8 @@ int RLTYPE;
 
 static void poll_keyboard() {
     M5Cardputer.update();
+    extern void tickFanSound();
+    tickFanSound();
     
     if (M5Cardputer.BtnA.wasPressed()) {
         cpu.wtstate = true;  // Pause CPU

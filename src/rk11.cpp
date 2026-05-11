@@ -200,6 +200,10 @@ void RK11::readwrite() {
 }
 
 void RK11::seek() {
+    extern void playDiskSeekSound(int cylinderDist);
+    playDiskSeekSound(abs((int)cylinder - (int)last_cylinder[drive]));
+    last_cylinder[drive] = cylinder;
+
     const uint32_t pos = (cylinder * 24 + surface * 12 + sector) * 512;
     rkda = (drive << 13) | (cylinder << 5) | (surface << 4) | sector;
     if (!rk05[drive].seek(pos))
@@ -245,7 +249,9 @@ void RK11::reset() {
     rkdelay = 0;
     drive = cylinder = surface = sector = 0;
     rkdelay = 0;
+    for(int i=0; i<4; i++) last_cylinder[i] = 0;
 }
+
 
 void RK11::saveSnapshot(File f) {
     f.write((uint8_t*)&rkds, sizeof(rkds));
@@ -261,6 +267,7 @@ void RK11::saveSnapshot(File f) {
     f.write((uint8_t*)&cylinder, sizeof(cylinder));
     f.write((uint8_t*)&rkba18, sizeof(rkba18));
     f.write((uint8_t*)&rkdelay, sizeof(rkdelay));
+    f.write((uint8_t*)last_cylinder, sizeof(last_cylinder));
 }
 
 void RK11::loadSnapshot(File f) {
@@ -277,4 +284,5 @@ void RK11::loadSnapshot(File f) {
     f.read((uint8_t*)&cylinder, sizeof(cylinder));
     f.read((uint8_t*)&rkba18, sizeof(rkba18));
     f.read((uint8_t*)&rkdelay, sizeof(rkdelay));
+    f.read((uint8_t*)last_cylinder, sizeof(last_cylinder));
 }

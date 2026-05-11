@@ -92,6 +92,19 @@ void tickDiskLED() {
     // No longer needed
 }
 
+void playDiskSeekSound(int cylinderDist) {
+    if (!current_options.disk_sounds) return;
+    if (cylinderDist == 0) return;
+    M5Cardputer.Speaker.tone(150, 10);
+}
+
+void tickFanSound() {
+    if (!current_options.fan_sound) return;
+    if (!M5Cardputer.Speaker.isPlaying()) {
+        M5Cardputer.Speaker.tone(70, 500);
+    }
+}
+
 // ── Soft Reset ────────────────────────────────────────────────────────────────
 extern KB11 cpu; // from kb11.h
 

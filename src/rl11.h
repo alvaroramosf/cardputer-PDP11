@@ -54,6 +54,7 @@ void loadSnapshot(File f);
 
 private:
     uint16_t drive, drun;
+    uint16_t last_cylinder[4] = {0,0,0,0};
     uint16_t RLWC, RLDA, RLMP, RLCS, RLBAE, RLUNIT;
     uint32_t RLBA, RLBA22;
 

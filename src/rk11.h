@@ -19,6 +19,7 @@ class RK11 {
 	uint16_t rkds, rker, rkcs, rkwc, rkba, rkda;
 	uint8_t bcnt;
     uint32_t drive, sector, surface, cylinder,rkba18,rkdelay;
+    uint32_t last_cylinder[4] = {0,0,0,0};
 
     void rknotready();
     void rkready();

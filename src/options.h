@@ -29,6 +29,8 @@ struct EmulatorOptions {
     BootDevice boot_device;
     bool led_enabled;
     int font_size;
+    bool disk_sounds;
+    bool fan_sound;
 };
 
 extern EmulatorOptions current_options;
