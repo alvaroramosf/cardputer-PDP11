@@ -22,6 +22,8 @@ enum INTVEC {
 };
 
 [[ noreturn ]] void trap(uint16_t num);
+void setDiskLED(bool write, bool active);
+void tickDiskLED();
 
 
 #if defined (VMS)

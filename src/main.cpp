@@ -13,6 +13,7 @@
 #include <SD.h>
 #include <FS.h>
 #include <ESP32Time.h>
+#include <FastLED.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
@@ -68,6 +69,22 @@ void flush_console() {
         lastPush = millis();
         display_dirty = false;
     }
+}
+
+CRGB leds[1];
+
+void setDiskLED(bool write, bool active) {
+    if (!current_options.led_enabled) return;
+    if (!active) {
+        leds[0] = CRGB::Black;
+    } else {
+        leds[0] = write ? CRGB::Red : CRGB::Blue;
+    }
+    FastLED.show();
+}
+
+void tickDiskLED() {
+    // No longer needed
 }
 
 // ── Soft Reset ────────────────────────────────────────────────────────────────
@@ -170,6 +187,12 @@ void setup() {
     // Hardware init
     auto cfg = M5.config();
     M5Cardputer.begin(cfg, true);          // true = enable keyboard
+    
+    FastLED.addLeds<WS2812, 21, GRB>(leds, 1);
+    FastLED.setBrightness(32);
+    leds[0] = CRGB::Black;
+    FastLED.show();
+    
     M5Cardputer.Display.setRotation(1);    // landscape 240×135
     
     // Load options from NVS
@@ -244,7 +267,7 @@ void setup() {
             cpu.unibus.rl11.rl02[i] = SD.open(path.c_str(), "rb+");
         }
     }
-    if (current_options.rk_disks[0] < 0 && current_options.rl_disks[0] >= 0) bootdev = 1;
+    bootdev = (int)current_options.boot_device;
 
     Serial.printf("bootdev=%d\r\n", bootdev);
 

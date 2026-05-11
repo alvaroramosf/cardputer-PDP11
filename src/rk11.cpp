@@ -151,6 +151,8 @@ void RK11::readwrite() {
     uint8_t secbuf[512] = {0};
     int words_to_transfer = 0;
     
+    setDiskLED(w, true);
+    
     // If reading, read the whole sector first
     if (!w) {
         rk05[drive].read(secbuf, 512);
@@ -194,6 +196,7 @@ void RK11::readwrite() {
         }
     }
     rkda = (drive << 13) | (cylinder << 5) | (surface << 4) | sector;
+    setDiskLED(w, false);
 }
 
 void RK11::seek() {

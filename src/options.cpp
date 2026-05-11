@@ -25,6 +25,8 @@ void loadOptions() {
     current_options.term_color  = (TermColor)preferences.getInt("term_color", COLOR_GREEN);
     current_options.brightness  = preferences.getInt("brightness", 200);
     current_options.cpu_model   = (CpuModel)preferences.getInt("cpu_model", CPU_PDP1140);
+    current_options.boot_device = (BootDevice)preferences.getInt("boot_device", BOOT_RK);
+    current_options.led_enabled = preferences.getBool("led_enabled", true);
     preferences.end();
 }
 
@@ -40,6 +42,8 @@ void saveOptions() {
     preferences.putInt("term_color", current_options.term_color);
     preferences.putInt("brightness", current_options.brightness);
     preferences.putInt("cpu_model",  current_options.cpu_model);
+    preferences.putInt("boot_device", current_options.boot_device);
+    preferences.putBool("led_enabled", current_options.led_enabled);
     preferences.end();
 }
 
@@ -108,6 +112,11 @@ static void drawMenuList(int num_items, int selected, const char* items[], int a
         bool isActive = (i == active_idx);
         String label = String(i + 1) + ". " + items[i];
         if (isActive) label += " *";
+        
+        // Truncate if too long (approx 38-39 chars for 240px wide font0)
+        if (label.length() > 38) {
+            label = label.substring(0, 35) + "...";
+        }
         
         if (i == selected) {
             M5Cardputer.Display.fillRect(0, y - 1, 240, lineH, fg);
@@ -404,6 +413,146 @@ static void menuCpuModel() {
     }
 }
 
+static void menuBootDevice() {
+    int sel = (int)current_options.boot_device;
+    bool redraw = true;
+    const char* items[] = { "RK05 (Disk 0)", "RL01/02 (Disk 0)" };
+    while(true) {
+        if (redraw) {
+            drawMenuHeader("Select Boot Device");
+            drawMenuList(2, sel, items, (int)current_options.boot_device);
+            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            redraw = false;
+        }
+        M5Cardputer.update();
+        if (M5Cardputer.BtnA.wasPressed() || request_soft_reset) { request_soft_reset = true; return; }
+        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+            auto status = M5Cardputer.Keyboard.keysState();
+            bool esc_pressed = status.del;
+            for (auto ch : status.word) {
+                if (ch == ';') { if (sel > 0) { sel--; redraw = true; } }
+                if (ch == '.') { if (sel < 1) { sel++; redraw = true; } }
+                if (ch == 27 || ch == '`') esc_pressed = true;
+            }
+            if (status.enter) {
+                current_options.boot_device = (BootDevice)sel;
+                saveOptions();
+                waitForKeyRelease();
+                return;
+            }
+            if (esc_pressed) { waitForKeyRelease(); return; }
+        }
+        delay(20);
+    }
+}
+
+static void menuDiskLED() {
+    int sel = current_options.led_enabled ? 0 : 1;
+    bool redraw = true;
+    const char* items[] = { "Enabled", "Disabled" };
+    while(true) {
+        if (redraw) {
+            drawMenuHeader("Disk Activity LED");
+            drawMenuList(2, sel, items, current_options.led_enabled ? 0 : 1);
+            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            redraw = false;
+        }
+        M5Cardputer.update();
+        if (M5Cardputer.BtnA.wasPressed() || request_soft_reset) { request_soft_reset = true; return; }
+        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+            auto status = M5Cardputer.Keyboard.keysState();
+            bool esc_pressed = status.del;
+            for (auto ch : status.word) {
+                if (ch == ';') { if (sel > 0) { sel--; redraw = true; } }
+                if (ch == '.') { if (sel < 1) { sel++; redraw = true; } }
+                if (ch == 27 || ch == '`') esc_pressed = true;
+            }
+            if (status.enter) {
+                current_options.led_enabled = (sel == 0);
+                saveOptions();
+                waitForKeyRelease();
+                return;
+            }
+            if (esc_pressed) { waitForKeyRelease(); return; }
+        }
+        delay(20);
+    }
+}
+
+static void menuRKDrives() {
+    int sel = 0;
+    bool redraw = true;
+    while(true) {
+        if (redraw) {
+            String rk0 = "RK0: " + (current_options.rk_disks[0] >= 0 ? Fnames[current_options.rk_disks[0]] : "[Empty]");
+            String rk1 = "RK1: " + (current_options.rk_disks[1] >= 0 ? Fnames[current_options.rk_disks[1]] : "[Empty]");
+            String rk2 = "RK2: " + (current_options.rk_disks[2] >= 0 ? Fnames[current_options.rk_disks[2]] : "[Empty]");
+            String rk3 = "RK3: " + (current_options.rk_disks[3] >= 0 ? Fnames[current_options.rk_disks[3]] : "[Empty]");
+            const char* items[] = { rk0.c_str(), rk1.c_str(), rk2.c_str(), rk3.c_str() };
+            drawMenuHeader("RK05 Drive Config");
+            drawMenuList(4, sel, items);
+            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            redraw = false;
+        }
+        M5Cardputer.update();
+        if (M5Cardputer.BtnA.wasPressed() || request_soft_reset) { request_soft_reset = true; return; }
+        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+            auto status = M5Cardputer.Keyboard.keysState();
+            bool handled = false;
+            for (auto ch : status.word) {
+                if (ch == ';') { if (sel > 0) { sel--; redraw = true; handled = true; } }
+                if (ch == '.') { if (sel < 3) { sel++; redraw = true; handled = true; } }
+                if (ch == 27 || ch == '`') { waitForKeyRelease(); return; }
+            }
+            if (status.enter && !handled) {
+                char title[32];
+                snprintf(title, sizeof(title), "Select RK05 Drive %d", sel);
+                menuSelectDisk(&current_options.rk_disks[sel], title);
+                redraw = true;
+            }
+            if (status.del) { waitForKeyRelease(); return; }
+        }
+        delay(20);
+    }
+}
+
+static void menuRLDrives() {
+    int sel = 0;
+    bool redraw = true;
+    while(true) {
+        if (redraw) {
+            String rl0 = "RL0: " + (current_options.rl_disks[0] >= 0 ? Fnames[current_options.rl_disks[0]] : "[Empty]");
+            String rl1 = "RL1: " + (current_options.rl_disks[1] >= 0 ? Fnames[current_options.rl_disks[1]] : "[Empty]");
+            String rl2 = "RL2: " + (current_options.rl_disks[2] >= 0 ? Fnames[current_options.rl_disks[2]] : "[Empty]");
+            String rl3 = "RL3: " + (current_options.rl_disks[3] >= 0 ? Fnames[current_options.rl_disks[3]] : "[Empty]");
+            const char* items[] = { rl0.c_str(), rl1.c_str(), rl2.c_str(), rl3.c_str() };
+            drawMenuHeader("RL01/02 Drive Config");
+            drawMenuList(4, sel, items);
+            drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
+            redraw = false;
+        }
+        M5Cardputer.update();
+        if (M5Cardputer.BtnA.wasPressed() || request_soft_reset) { request_soft_reset = true; return; }
+        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+            auto status = M5Cardputer.Keyboard.keysState();
+            bool handled = false;
+            for (auto ch : status.word) {
+                if (ch == ';') { if (sel > 0) { sel--; redraw = true; handled = true; } }
+                if (ch == '.') { if (sel < 3) { sel++; redraw = true; handled = true; } }
+                if (ch == 27 || ch == '`') { waitForKeyRelease(); return; }
+            }
+            if (status.enter && !handled) {
+                char title[32];
+                snprintf(title, sizeof(title), "Select RL01/02 Drive %d", sel);
+                menuSelectDisk(&current_options.rl_disks[sel], title);
+                redraw = true;
+            }
+            if (status.del) { waitForKeyRelease(); return; }
+        }
+        delay(20);
+    }
+}
+
 static void menuBattery() {
     bool redraw = true;
     while(true) {
@@ -504,29 +653,22 @@ static void menuSystemInfo() {
 static void menuEmulationSettings() {
     int sel = 0;
     bool redraw = true;
-    int num_items = 9;
+    int num_items = 4;
     while(true) {
         if (redraw) {
             const char* cpu_name = (current_options.cpu_model == CPU_PDP1123)
                 ? "CPU Model: PDP-11/23" : "CPU Model: PDP-11/40";
                 
-            String rk0 = "RK05 Drive 0 (Boot): " + (current_options.rk_disks[0] >= 0 ? Fnames[current_options.rk_disks[0]] : "[Empty]");
-            String rk1 = "RK05 Drive 1:        " + (current_options.rk_disks[1] >= 0 ? Fnames[current_options.rk_disks[1]] : "[Empty]");
-            String rk2 = "RK05 Drive 2:        " + (current_options.rk_disks[2] >= 0 ? Fnames[current_options.rk_disks[2]] : "[Empty]");
-            String rk3 = "RK05 Drive 3:        " + (current_options.rk_disks[3] >= 0 ? Fnames[current_options.rk_disks[3]] : "[Empty]");
-            
-            String rl0 = "RL02 Drive 0 (Boot): " + (current_options.rl_disks[0] >= 0 ? Fnames[current_options.rl_disks[0]] : "[Empty]");
-            String rl1 = "RL02 Drive 1:        " + (current_options.rl_disks[1] >= 0 ? Fnames[current_options.rl_disks[1]] : "[Empty]");
-            String rl2 = "RL02 Drive 2:        " + (current_options.rl_disks[2] >= 0 ? Fnames[current_options.rl_disks[2]] : "[Empty]");
-            String rl3 = "RL02 Drive 3:        " + (current_options.rl_disks[3] >= 0 ? Fnames[current_options.rl_disks[3]] : "[Empty]");
-            
+            const char* boot_dev_name = (current_options.boot_device == BOOT_RL) ? "Boot Device: RL01/02" : "Boot Device: RK05";
+
             const char* items[] = {
                 cpu_name,
-                rk0.c_str(), rk1.c_str(), rk2.c_str(), rk3.c_str(),
-                rl0.c_str(), rl1.c_str(), rl2.c_str(), rl3.c_str()
+                boot_dev_name,
+                "RK05 Drives Config",
+                "RL01/02 Drives Config"
             };
             drawMenuHeader("Emulation Settings");
-            drawMenuList(num_items, sel, items);
+            drawMenuList(4, sel, items);
             drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
             redraw = false;
         }
@@ -548,14 +690,9 @@ static void menuEmulationSettings() {
             if (status.enter && !handled) {
                 switch(sel) {
                     case 0: menuCpuModel(); break;
-                    case 1: menuSelectDisk(&current_options.rk_disks[0], "Select RK05 Drive 0"); break;
-                    case 2: menuSelectDisk(&current_options.rk_disks[1], "Select RK05 Drive 1"); break;
-                    case 3: menuSelectDisk(&current_options.rk_disks[2], "Select RK05 Drive 2"); break;
-                    case 4: menuSelectDisk(&current_options.rk_disks[3], "Select RK05 Drive 3"); break;
-                    case 5: menuSelectDisk(&current_options.rl_disks[0], "Select RL02 Drive 0"); break;
-                    case 6: menuSelectDisk(&current_options.rl_disks[1], "Select RL02 Drive 1"); break;
-                    case 7: menuSelectDisk(&current_options.rl_disks[2], "Select RL02 Drive 2"); break;
-                    case 8: menuSelectDisk(&current_options.rl_disks[3], "Select RL02 Drive 3"); break;
+                    case 1: menuBootDevice(); break;
+                    case 2: menuRKDrives(); break;
+                    case 3: menuRLDrives(); break;
                 }
                 redraw = true;
             }
@@ -577,10 +714,11 @@ static void menuCardputerSettings() {
             const char* items[] = {
                 "Text Colour",
                 "Brightness",
+                "Disk Activity LED",
                 "Battery Status"
             };
             drawMenuHeader("Cardputer Settings");
-            drawMenuList(num_items, sel, items);
+            drawMenuList(4, sel, items);
             drawMenuFooter("; Up  . Down  Enter Select  Esc Back");
             redraw = false;
         }
@@ -594,6 +732,7 @@ static void menuCardputerSettings() {
             auto status = M5Cardputer.Keyboard.keysState();
             bool handled = false;
             bool esc_pressed = status.del;
+            int num_items = 4;
             for (auto ch : status.word) {
                 if (ch == ';') { if (sel > 0) { sel--; redraw = true; handled = true; } }
                 if (ch == '.') { if (sel < num_items - 1) { sel++; redraw = true; handled = true; } }
@@ -603,7 +742,8 @@ static void menuCardputerSettings() {
                 switch(sel) {
                     case 0: menuTerminalColor(); break;
                     case 1: menuBrightness(); break;
-                    case 2: menuBattery(); break;
+                    case 2: menuDiskLED(); break;
+                    case 3: menuBattery(); break;
                 }
                 redraw = true;
             }
