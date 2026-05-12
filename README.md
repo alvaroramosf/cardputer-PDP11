@@ -4,7 +4,8 @@ A PDP-11/40 and PDP-11/23 emulator running on the **M5Stack Cardputer** (ESP32-S
 Boot Unix V6, RT-11, RSX-11/M or RSTS/E directly from an SD card —
 all from a pocket-sized device with a real keyboard.
 
-![Cardputer Logo](Images/Logo.jpg)
+<img src="unixv6.jpeg" width="400">
+<img src="Images/Logo.jpg" width="150">
 
 > [!IMPORTANT]
 > **Work in Progress:** This project is under active development. It may contain bugs, missing features, or performance issues.
@@ -125,8 +126,6 @@ The firmware scans `/pdp11/` **recursively** for files with `.rk05`, `.rl01`, or
 
 ## Booting UNIX V6
 
-![Unix V6 on Cardputer](unixv6.jpeg)
-
 1. Go to **Emulation Settings** → **RK05 Drives Config** and select `unix0_v6_rk_DL.rk05` for **RK0**.
 2. Exit to the terminal. If it doesn't boot automatically, perform a **System Reset**.
 3. At the `@` prompt, type `rkunix` and press Enter.
@@ -145,8 +144,6 @@ To configure those disks, you need to add them to the `Emulation Settings` → `
 ---
 
 ## System Snapshots
-
-![RT-11 Snapshot](rt11.jpeg)
 
 You can save the entire state of the PDP-11 (CPU registers + RAM) to the SD card and resume it later instantly.
 
@@ -199,7 +196,7 @@ The orange **G0** button opens the **Options Menu** and pauses the emulation. Pr
 
 ## Options Menu
 
-![Options Menu](g0menu.jpeg)
+<img src="g0menu.jpeg" width="400">
 
 The menu is divided into several sections:
 
