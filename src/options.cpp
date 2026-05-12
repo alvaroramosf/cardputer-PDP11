@@ -1017,6 +1017,12 @@ String textInput(const char* title, const char* initial) {
     }
 }
 
+static String getSnapshotBasename(String path) {
+    int pos = path.lastIndexOf('/');
+    if (pos == -1) return path;
+    return path.substring(pos + 1);
+}
+
 void menuManageSnapshots() {
     while(true) {
         File root = SD.open("/snapshots");
@@ -1031,7 +1037,12 @@ void menuManageSnapshots() {
             File entry = root.openNextFile();
             if (!entry) break;
             if (entry.isDirectory()) {
-                if (count < 40) snapshots[count++] = entry.name();
+                String name = entry.name();
+                if (name != "." && name != "..") {
+                    // Store full path or just name consistently
+                    if (!name.startsWith("/")) name = "/snapshots/" + name;
+                    if (count < 40) snapshots[count++] = name;
+                }
             }
             entry.close();
         }
@@ -1053,7 +1064,11 @@ void menuManageSnapshots() {
             if (redraw) {
                 drawMenuHeader("Manage Snapshots");
                 const char* items[40];
-                for (int i=0; i<count; i++) items[i] = snapshots[i].c_str();
+                String displayNames[40];
+                for (int i=0; i<count; i++) {
+                    displayNames[i] = getSnapshotBasename(snapshots[i]);
+                    items[i] = displayNames[i].c_str();
+                }
                 drawMenuList(count, sel, items);
                 drawMenuFooter("Enter: Options  Esc: Back");
                 redraw = false;
@@ -1096,14 +1111,30 @@ void menuManageSnapshots() {
                             }
                             if (s_status.enter) {
                                 if (sub_sel == 0) { // Rename
-                                    String oldName = snapshots[sel];
+                                    String oldPath = snapshots[sel];
+                                    String oldName = getSnapshotBasename(oldPath);
                                     String newName = textInput("New name:", oldName.c_str());
                                     if (newName != "" && newName != oldName) {
-                                        SD.rename(("/snapshots/" + oldName).c_str(), ("/snapshots/" + newName).c_str());
+                                        String newPath = "/snapshots/" + newName;
+                                        drawMenuHeader("Renaming...");
+                                        M5Cardputer.Display.setCursor(10, 40);
+                                        M5Cardputer.Display.setTextColor(TFT_WHITE);
+                                        M5Cardputer.Display.printf("To: %s", newName.c_str());
+                                        if (SD.rename(oldPath.c_str(), newPath.c_str())) {
+                                            M5Cardputer.Display.setCursor(10, 60);
+                                            M5Cardputer.Display.setTextColor(TFT_GREEN);
+                                            M5Cardputer.Display.print("Rename OK!");
+                                        } else {
+                                            M5Cardputer.Display.setCursor(10, 60);
+                                            M5Cardputer.Display.setTextColor(TFT_RED);
+                                            M5Cardputer.Display.print("Rename FAILED!");
+                                        }
+                                        M5Cardputer.update();
+                                        delay(1500);
                                     }
                                     break; // Refresh list
                                 } else if (sub_sel == 1) { // Delete
-                                    deleteRecursive(("/snapshots/" + snapshots[sel]).c_str());
+                                    deleteRecursive(snapshots[sel].c_str());
                                     break; // Refresh list
                                 } else {
                                     break;
@@ -1129,13 +1160,17 @@ void loadSnapshotMenu() {
         return;
     }
     
-    String snapshots[30];
+    String snapshots[40];
     int count = 0;
     while (true) {
         File entry = root.openNextFile();
         if (!entry) break;
-        if (entry.isDirectory() && String(entry.name()).startsWith("snap_")) {
-            if (count < 30) snapshots[count++] = entry.name();
+        if (entry.isDirectory()) {
+            String name = entry.name();
+            if (name != "." && name != "..") {
+                if (!name.startsWith("/")) name = "/snapshots/" + name;
+                if (count < 40) snapshots[count++] = name;
+            }
         }
         entry.close();
     }
@@ -1148,8 +1183,12 @@ void loadSnapshotMenu() {
     while(true) {
         if (redraw) {
             drawMenuHeader("Load Snapshot");
-            const char* items[30];
-            for (int i=0; i<count; i++) items[i] = snapshots[i].c_str();
+            const char* items[40];
+            String displayNames[40];
+            for (int i=0; i<count; i++) {
+                displayNames[i] = getSnapshotBasename(snapshots[i]);
+                items[i] = displayNames[i].c_str();
+            }
             drawMenuList(count, sel, items);
             drawMenuFooter("; Up  . Down  Ent Select  Esc Back");
             redraw = false;
@@ -1165,7 +1204,7 @@ void loadSnapshotMenu() {
                 if (ch == 27 || ch == '`') esc_pressed = true;
             }
             if (status.enter) {
-                snapshot_to_load = String("/snapshots/") + snapshots[sel];
+                snapshot_to_load = snapshots[sel];
                 request_load_snapshot = true;
                 return;
             }
