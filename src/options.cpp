@@ -71,7 +71,7 @@ static void waitForKeyRelease() {
 }
 
 static uint16_t getMenuColor() {
-    if (current_options.term_color == COLOR_AMBER) return 0xFFB000;
+    if (current_options.term_color == COLOR_AMBER) return 0xFFCC00;
     if (current_options.term_color == COLOR_WHITE) return TFT_WHITE;
     if (current_options.term_color == COLOR_PAPER) return BLACK;
     return TFT_GREEN;

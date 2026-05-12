@@ -42,7 +42,7 @@ bool display_dirty = false;
 void update_canvas_colors() {
     uint16_t fg = TFT_GREEN;
     uint16_t bg = BLACK;
-    if (current_options.term_color == COLOR_AMBER) fg = 0xFFB000;
+    if (current_options.term_color == COLOR_AMBER) fg = 0xFFCC00;
     else if (current_options.term_color == COLOR_WHITE) fg = TFT_WHITE;
     else if (current_options.term_color == COLOR_PAPER) { fg = BLACK; bg = 0xFFFFCC; }
     
