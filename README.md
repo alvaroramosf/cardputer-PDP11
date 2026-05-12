@@ -6,6 +6,9 @@ all from a pocket-sized device with a real keyboard.
 
 ![Cardputer Logo](Images/Logo.jpg)
 
+> [!IMPORTANT]
+> **Work in Progress:** This project is under active development. It may contain bugs, missing features, or performance issues.
+
 > **Fork of** [Isysxp/PDP11-on-the-M5-Core](https://github.com/Isysxp/PDP11-on-the-M5-Core)
 > by Ian Schofield. Original work ported from the M5Stack Core2 (touch screen, WiFi)
 > to the Cardputer (physical keyboard, no WiFi required). See
@@ -19,12 +22,13 @@ all from a pocket-sized device with a real keyboard.
 3. [Supported Operating Systems](#supported-operating-systems)
 4. [SD Card Setup](#sd-card-setup)
 5. [Booting UNIX V6](#booting-unix-v6)
-6. [Building & Flashing](#building--flashing)
-7. [Controls](#controls)
-8. [Options Menu](#options-menu)
-9. [Project Structure](#project-structure)
-10. [Changelog](#changelog)
-11. [Credits](#credits)
+6. [System Snapshots](#system-snapshots)
+7. [Building & Flashing](#building--flashing)
+8. [Controls](#controls)
+9. [Options Menu](#options-menu)
+10. [Project Structure](#project-structure)
+11. [Changelog](#changelog)
+12. [Credits](#credits)
 
 ---
 
@@ -66,190 +70,157 @@ all from a pocket-sized device with a real keyboard.
 
 > **Note:** With only 248 KB of internal SRAM (Cardputer has no PSRAM),
 > both models are limited to 248 KB of RAM regardless of address bus width.
-> Systems requiring >248 KB (e.g. Ultrix-11, 2.9BSD) will not run.
+> Systems requiring >248 KB (e.g. Ultrix-11, 2.9BSD) will not run. I hope that a future version of the Cardputer will have more RAM available thus allowing you to run those OSes.
 
 ---
 
 ## Supported Operating Systems
 
-### PDP-11/40 images (`/pdp11/pdp11-40/`)
+The emulator is optimized for systems that can run within the 248 KB RAM limit of the Cardputer.
 
-| Image file | OS | Boot device |
-|---|---|---|
-| `rk0_v6_DL.rk05` | Unix V6 (with DL11 second user) | RK05 |
-| `RT11_V5_CFB.RL02` | RT-11 V5 (FORTRAN, BASIC, …) | RL02 |
-| `RT11_V5_MUBasic.RL01` | RT-11 V5 + Multi-User BASIC | RL01 |
-| `rsts_v9_iss_forth.rl02` | RSTS/E V9 + FORTH | RL02 |
-| `rsx11m46-ccc.rl02` | RSX-11/M 4.6 | RL02 |
+### Recommended OS Images
 
-### PDP-11/23 images (`/pdp11/pdp11-23/`) — require >248 KB RAM
+| Image file | OS | Boot device | Notes |
+|---|---|---|---|
+| `unix0_v6_rk_DL.rk05` | Unix V6 (with DL11) | RK05 | The classic Unix experience |
+| `unix_v5.rk05` | Unix V5 (Fifth Edition) | RK05 | Historical vintage Unix |
+| `RT11_V5_CFB.RL02` | RT-11 V5 | RL02 | Real-time OS with FORTRAN, BASIC |
+| `RT11_V5_MUBasic.RL01` | RT-11 V5 + MU-BASIC | RL01 | Multi-User BASIC environment |
+| `rsts_v9_iss_forth.rl02` | RSTS/E V9 + FORTH | RL02 | Time-sharing system |
+| `rsx11m46-ccc.rl02` | RSX-11/M 4.6 | RL02 | Real-time Executive |
 
-| Image file | OS | Boot device |
-|---|---|---|
-| `Ultrix-V2-Full.rl02` | Ultrix-11 V2 (2× RL02 volumes) | RL02 |
-| `Ultrix-V3.rl02` | Ultrix-11 V3 (2× RL02 volumes) | RL02 |
-| `Ultrix_V3_UX24.rl02` | Ultrix-11 V3 (22-bit / 11/24 mode) | RL02 |
+### High-Memory Images (Require >248 KB RAM)
 
-> Ultrix images require PSRAM (not available on stock Cardputer) and are
-> included for reference / future hardware with PSRAM expansion.
+The following images are included in the repository for reference or for future hardware with PSRAM expansion. They will **not** boot on a standard Cardputer:
+- **Ultrix-11 V2/V3**
+- **2.9BSD**
 
-All images are SIMH-compatible. See [`docs/Readme.os`](docs/Readme.os) for a
-full list of tested images.
+All images are SIMH-compatible. See [`docs/Readme.os`](docs/Readme.os) for a full list of tested images. I added those images because I hope a future version of the Cardputer will have more RAM available thus allowing you to run those OSes.
 
 ---
 
 ## SD Card Setup
 
-Format a MicroSD card as **FAT32** and create the following structure:
+To prepare your SD card, format it as **FAT32**. You must copy the contents of the `Images` directory from this repository into a folder named `pdp11` on the root of your SD card.
+
+Your SD card structure should look like this:
 
 ```
 /
 └── pdp11/
-    ├── Empty_RK05.dsk        ← required blank RK05 placeholder
-    ├── Empty_RL02.dsk        ← required blank RL02 placeholder
-    ├── pdp11-40/             ← 18-bit OS images (PDP-11/40 compatible)
-    │   ├── rk0_v6_DL.rk05
-    │   ├── RT11_V5_CFB.RL02
+    ├── Empty_RK05.dsk        ← required blank RK05 template
+    ├── Empty_RL01.dsk        ← required blank RL01 template
+    ├── Empty_RL02.dsk        ← required blank RL02 template
+    ├── pdp11-40/             ← OS images for PDP-11/40
+    │   ├── unix_v6/
+    │   ├── unix_v5.rk05
     │   └── ...
-    └── pdp11-23/             ← 22-bit OS images (PDP-11/23 / need >248 KB)
-        ├── Ultrix-V3.rl02
-        └── ...
+    ├── pdp11-23/             ← OS images for PDP-11/23 (ref only)
+    └── snapshots/            ← (Optional) Snapshots saved from the menu
 ```
 
-The firmware scans `/pdp11/` **recursively** for files with `.rk05` or `.rl0x`
-extensions. The disk selection menu allows navigating these subdirectories.
-
-> **Tip:** Organize your images by OS or CPU model (e.g., `/pdp11/pdp11-40/unix_v6/`).
+The firmware scans `/pdp11/` **recursively** for files with `.rk05`, `.rl01`, or `.rl02` extensions.
 
 ---
 
 ## Booting UNIX V6
 
-### Single Disk Boot
-1. Select your root image (e.g., `unix0_v6_rk_DL.rk05`) in **RK05 Drive 0**.
-2. Exit the menu to boot.
+![Unix V6 on Cardputer](unixv6.jpeg)
+
+1. Go to **Emulation Settings** → **RK05 Drives Config** and select `unix0_v6_rk_DL.rk05` for **RK0**.
+2. Exit to the terminal. If it doesn't boot automatically, perform a **System Reset**.
 3. At the `@` prompt, type `rkunix` and press Enter.
-4. When the `login:` prompt appears, type `root` and press Enter.
-5. When the `#` prompt appears, you are in!
+4. Login as `root`.
 
-### Multi-Disk Configuration
-To access extra volumes (like `/usr` or `/doc` from SIMH distributions), you should map the images as follows in the **Emulation Settings** menu:
+### Mounting Extra Disks
+If you have multiple disks configured (RK1, RK2...), you can mount them in Unix V6:
+```bash
+/etc/mount /dev/rk1 /usr
+/etc/mount /dev/rk2 /doc
+```
+Verify with `ls /usr` or `ls /doc`.
 
-| RK Drive | Image File | Mount Point | Content |
-|---|---|---|---|
-| **RK0** | `unix0_v6_rk_DL.rk05` | `/` (Root) | Boot kernel and base system |
-| **RK1** | `unix1_v6_rk.rk05` | `/usr` | User files, binaries, games |
-| **RK2** | `unix2_v6_rk.rk05` | `/doc` | Documentation and source code |
-| **RK3** | `unix3_v6_rk.rk05` | (optional) | Extra binaries or source |
-
-#### Mounting Procedure
-1. Boot from **RK0** (`rkunix`).
-2. Log in as `root`.
-3. Create the device nodes for the extra drives (one-time setup):
-   ```bash
-   /etc/mknod /dev/rk1 b 0 1
-   /etc/mknod /dev/rk2 b 0 2
-   /etc/mknod /dev/rk3 b 0 3
-   ```
-4. Mount the volumes:
-   ```bash
-   /etc/mount /dev/rk1 /usr
-   /etc/mount /dev/rk2 /doc
-   ```
-5. Verify the content with `ls /usr` or `ls /doc`.
+To configure those disks, you need to add them to the `Emulation Settings` → `RK05 Drives Config` menu, selecting the proper image files.
 
 ---
+
+## System Snapshots
+
+![RT-11 Snapshot](rt11.jpeg)
+
+You can save the entire state of the PDP-11 (CPU registers + RAM) to the SD card and resume it later instantly.
+
+### Current Snapshots
+The repository includes these pre-configured snapshots:
+- **`rt-11-basic`**: RT-11 V5 with Multi-User BASIC pre-loaded and ready to use.
+- **`unix5`**: Unix Fifth Edition (V5) root system.
+- **`unix6-mounted-disks`**: Unix V6 with `/usr` and `/doc` already mounted, saving you the manual mount steps.
+
+To load a snapshot, use the **Load Snapshot** option in the Main Menu.
 
 ---
 
 ## Building & Flashing
 
-This project uses **PlatformIO**. Arduino IDE is **not** supported.
+This project uses **PlatformIO**.
 
 ### Prerequisites
-
 ```bash
 pip install platformio
 ```
 
-### Compile
-
-```bash
-pio run
-```
-
-### Flash
-
+### Compile & Flash
 ```bash
 pio run -t upload
 ```
 
-### Serial Monitor / USB Console
-
+### Serial Monitor
 ```bash
 pio device monitor -b 115200
 ```
-
-The USB-C port exposes a CDC serial port serving two purposes:
-
-1. **Debug output** — SD card info, disk selection, free RAM, CPU state on HALT.
-2. **Parallel PDP-11 console** — characters from the PC terminal are injected
-   into the KL11 receive register.
+The USB port provides debug info and a parallel PDP-11 console.
 
 ---
 
 ## Controls
 
-### G0 Button
+### G0 Button (Orange)
+The orange **G0** button opens the **Options Menu** and pauses the emulation. Pressing it again (or Esc) resumes execution.
 
-The orange **G0** button (below the display) opens the **Options Menu** directly,
-pausing the CPU while the menu is open and resuming on exit.
-
-```
-  ┌─────────────┐   G0   ┌─────────────┐
-  │  Emulator   │ ──────▶│Options Menu │
-  │  (running)  │        │             │
-  └─────────────┘        └─────────────┘
-         ▲                     │  Esc / G0
-         └─────────────────────┘
-              (CPU resumes)
-```
-
-### Emulator — PDP-11 Terminal
-
+### PDP-11 Terminal
 | Key | Action |
 |-----|--------|
-| Any printable key | Sent directly to PDP-11 console (KL11) |
-| `Ctrl`+`letter` | ASCII control code (`Ctrl+C` → ETX, `Ctrl+D` → EOT …) |
-| `Del` | Sends DEL (0x7F) — used as rubout in old Unix |
+| Any printable key | Sent to PDP-11 console |
+| `Ctrl` + `letter` | ASCII control codes (`Ctrl+C`, `Ctrl+D`...) |
+| `Del` | Sends DEL (0x7F) / Rubout |
 | `Enter` | Sends CR (0x0D) |
-| `Tab` | Sends HT (0x09) |
-
-### HALT behaviour
-
-When the PDP-11 executes a `HALT` instruction in kernel mode:
-- The CPU enters wait state (emulation pauses)
-- Register state is printed to USB serial for debugging
-- Press **G0** to open the Options Menu (and optionally reset the machine)
-
-> A hardware-faithful F-11 ODT console interface (PDP-11/23 mode) is planned
-> for a future version.
 
 ---
 
 ## Options Menu
 
-| Option | Values |
-|--------|--------|
-| **Disk Image** | Navigate folders and select `.rk05` / `.rl0x` images |
-| **CPU Model** | PDP-11/40 (18-bit) · PDP-11/23 (22-bit F-11) |
-| **Text Colour** | Green (phosphor) · Amber · White · Paper |
-| **Brightness** | 5 levels (20 % – 100 %) |
-| **System Info** | Version, CPU model, free RAM, SD total/used |
-| **Battery Status** | Estimated level and voltage |
-| **System Reset** | Soft-reboot PDP-11 with current disk |
+![Options Menu](g0menu.jpeg)
 
-Settings are saved to **NVS** and restored on next boot.
+The menu is divided into several sections:
+
+- **Emulation Settings**:
+    - **CPU Model**: Toggle between PDP-11/40 and PDP-11/23.
+    - **Boot Device**: Select RK05 or RL01/02 as the default boot source.
+    - **RK05 Drives**: Map up to 4 virtual RK05 disks.
+    - **RL01/02 Drives**: Map up to 4 virtual RL01/02 disks.
+- **Cardputer Settings**:
+    - **Text Colour**: Choose between Green, Amber, White, or Paper (Black on Yellowish).
+    - **Brightness**: 5 levels of backlight intensity.
+    - **Font Size**: Toggle between Normal (1x) and Large (2x) text.
+    - **Disk Activity LED**: Enable/disable the physical LED flashes during disk I/O.
+    - **Disk Seek Sounds**: Enable simulated head clacking sounds.
+    - **Fan Simulation**: Enable a background "hum" for a more vintage feel.
+- **Snapshots**:
+    - **Create Snapshot**: Save the current machine state.
+    - **Load Snapshot**: Pick a saved state to resume.
+    - **Manage Snapshots**: Rename or delete existing snapshots.
+- **System Info**: Displays version, free RAM, and SD card status.
+- **System Reset**: Performs a soft-reboot of the emulated PDP-11.
 
 ---
 
@@ -257,29 +228,17 @@ Settings are saved to **NVS** and restored on next boot.
 
 ```
 cardpPDP11/
-├── src/              ← All C++ source files (PlatformIO build)
-│   ├── main.cpp      ← Arduino setup(), display canvas, SD scan
-│   ├── avr11.cpp     ← Main emulator loop, keyboard polling
-│   ├── kb11.cpp/h    ← PDP-11 CPU (instruction decode & execute, MFPT, reset)
-│   ├── unibus.cpp/h  ← Unibus / Q-Bus address space
-│   ├── kl11.cpp/h    ← Console serial (KL11)
-│   ├── dl11.cpp/h    ← Secondary serial (DL11)
-│   ├── rk11.cpp/h    ← RK11 disk controller
-│   ├── rl11.cpp/h    ← RL11 disk controller
-│   ├── fp11.cpp      ← FP11 floating-point unit
-│   ├── kt11.cpp/h    ← KT11 memory management unit
-│   ├── kw11.cpp/h    ← KW11-L line clock
-│   └── options.cpp/h ← Settings menu, NVS persistence
-├── Images/           ← SIMH-compatible disk images for the SD card
-│   ├── Empty_RK05.dsk
-│   ├── Empty_RL01.dsk
-│   ├── pdp11-40/     ← 18-bit OS images (PDP-11/40)
-│   └── pdp11-23/     ← 22-bit OS images (PDP-11/23, need >248 KB RAM)
-├── docs/             ← Additional documentation
-│   ├── UPSTREAM_README.md
-│   ├── Readme.Ultrix
-│   └── Readme.os
-└── platformio.ini    ← PlatformIO build configuration
+├── src/              ← Source code
+│   ├── main.cpp      ← Hardware init and main loop
+│   ├── avr11.cpp     ← Instruction loop
+│   ├── kb11.cpp      ← CPU implementation
+│   ├── options.cpp   ← Menu system and settings
+│   ├── rk11.cpp      ← RK11 Disk controller
+│   ├── rl11.cpp      ← RL11 Disk controller
+│   └── ...
+├── Images/           ← Disk images and templates
+├── docs/             ← Documentation
+└── platformio.ini    ← Build config
 ```
 
 ---
@@ -287,45 +246,26 @@ cardpPDP11/
 ## Changelog
 
 ### v0.1.5
-- **feat: Main Menu Battery Info** — Moved battery status to the main menu for easier access.
-- **fix: Snapshot Resume** — Fixed an issue where snapshots would load in a paused state. The CPU now resumes automatically after loading.
-- **fix: Disk LED Visibility** — Implemented a timer for the disk activity LED to ensure flashes are visible to the human eye.
+- **feat: Main Menu Battery Info** — Moved battery status to the main menu.
+- **fix: Snapshot Resume** — CPU now resumes automatically after loading.
+- **fix: Disk LED Visibility** — Implemented a timer for human-visible LED flashes.
 
 ### v0.1.2
-- **feat: Snapshot System** — Save and load machine state (CPU, memory, devices) directly to SD. Includes a manager to rename and delete snapshots.
-- **feat: Ambient Sounds** — Simulated disk head "clacks" on seek and background fan hum (toggleable in settings).
-- **feat: System Reset** — Reboots the emulator into "boot mode" (initial menu) to allow changing disks/settings.
-- **feat: Multi-disk RK11** — Connect up to 4 RK05 drives simultaneously.
-- **feat: Recursive Disk Browser** — Navigate folders on SD to organize your disk images.
-- **feat: CPU Model Selector** — Choose between PDP-11/40 (18-bit) and PDP-11/23 (22-bit F-11) from the menu.
-- **fix: RL11 Boot ROM** — Corrected CSR address (`0174400` → `0774400`); RL02/RL01 images now boot correctly.
-- **refactor: G0 Menu Propagation** — Pressing G0 now exits back to the emulator from any submenu.
-
-### v0.1.1
-- ODT-style monitor mode (register/memory inspect and modify)
-- Persistent settings via NVS
-
-### v0.1.0
-- Initial port from M5Stack Core2 to Cardputer
+- **feat: Snapshot System** — Save/load machine state to SD.
+- **feat: Ambient Sounds** — Disk seek "clacks" and fan hum.
+- **feat: System Reset** — Reboots into boot mode.
+- **feat: Multi-disk RK11** — Connect up to 4 RK05 drives.
 
 ---
 
 ## Credits
 
-- **Ian Schofield** ([@Isysxp](https://github.com/Isysxp)) — M5Stack Core2 port,
-  based on his [Pico_1140](https://github.com/Isysxp/Pico_1140) project (RP2040).
-- **Álvaro Ramos** ([@alvaroramosf](https://github.com/alvaroramosf)) — port to
-  M5Stack Cardputer: PlatformIO migration, keyboard/display adaptation,
-  CPU model selection, settings menu, and Cardputer-specific optimizations.
-- **Dave Cheney** — [avr11](https://github.com/dchest/avr11), the PDP-11 emulation
-  core for ATmega2560 that this project descends from (via cpp11 → Pico_1140).
-- **Julius Schmidt** — original JavaScript PDP-11 simulator that inspired avr11.
-- Disk images are compatible with **SIMH** but the emulation core is an
-  independent implementation, not a SIMH port.
+- **Ian Schofield** ([@Isysxp](https://github.com/Isysxp)) — Original M5Stack Core2 port.
+- **Álvaro Ramos** ([@alvaroramosf](https://github.com/alvaroramosf)) — Cardputer port, menu system, and optimizations.
+- **Dave Cheney** — [avr11](https://github.com/dchest/avr11) PDP-11 core.
+- **Julius Schmidt** — JavaScript PDP-11 simulator.
 
 ---
 
 ## License
-
-This project inherits the license terms of the upstream repository. See
-[`docs/UPSTREAM_README.md`](docs/UPSTREAM_README.md) for attribution.
+This project inherits the license terms of the upstream repository. See [`docs/UPSTREAM_README.md`](docs/UPSTREAM_README.md).
