@@ -89,7 +89,6 @@ void setDiskLED(bool write, bool active) {
 }
 
 void tickDiskLED() {
-    // No longer needed
 }
 
 void playDiskSeekSound(int cylinderDist) {
@@ -109,54 +108,25 @@ void tickFanSound() {
 extern KB11 cpu; // from kb11.h
 
 void perform_soft_reset() {
-    // Close old files
-    for(int i=0; i<4; i++) {
-        if (cpu.unibus.rk11.rk05[i]) { cpu.unibus.rk11.rk05[i].close(); cpu.unibus.rk11.rk05[i] = File(); }
-        if (cpu.unibus.rl11.rl02[i]) { cpu.unibus.rl11.rl02[i].close(); cpu.unibus.rl11.rl02[i] = File(); }
-    }
-    
-    // Open new files
-    int bootdev = 0;
-    for(int i=0; i<4; i++) {
-        if (current_options.rk_disks[i] >= 0) {
-            String path = "/pdp11/" + Fnames[current_options.rk_disks[i]];
-            cpu.unibus.rk11.rk05[i] = SD.open(path.c_str(), "rb+");
-        }
-        if (current_options.rl_disks[i] >= 0) {
-            String path = "/pdp11/" + Fnames[current_options.rl_disks[i]];
-            cpu.unibus.rl11.rl02[i] = SD.open(path.c_str(), "rb+");
-        }
-    }
-    if (current_options.rk_disks[0] < 0 && current_options.rl_disks[0] >= 0) bootdev = 1;
-    
-    if (current_options.rl_disks[0] >= 0 && strcasestr(Fnames[current_options.rl_disks[0]].c_str(), ".rl02")) {
-        extern int RLTYPE;
-        RLTYPE = 0235;
-    } else {
-        extern int RLTYPE;
-        RLTYPE = 035;
-    }
-    
-    cpu.reset(02002, bootdev);
-    
-    canvas.fillSprite(0);
-    canvas.setCursor(0, 0);
-    canvas.printf("[SYSTEM RESET]\r\n");
-    canvas.pushSprite(0, 0);
-    delay(500); 
+    ESP.restart();
 }
 
 void perform_load_snapshot(String dir) {
+    Serial.printf("Loading snapshot from: %s\n", dir.c_str());
     File f_cfg = SD.open((dir + "/config.bin").c_str(), "r");
     if (f_cfg) {
         f_cfg.read((uint8_t*)&current_options, sizeof(current_options));
         f_cfg.close();
+        Serial.println(" - Config loaded.");
+    } else {
+        Serial.println(" - Config NOT found!");
     }
     
     M5Cardputer.Display.setBrightness(current_options.brightness);
     update_canvas_colors();
     apply_canvas_font_size();
     
+    Serial.println(" - Reopening disks...");
     for(int i=0; i<4; i++) {
         if (cpu.unibus.rk11.rk05[i]) { cpu.unibus.rk11.rk05[i].close(); cpu.unibus.rk11.rk05[i] = File(); }
         if (cpu.unibus.rl11.rl02[i]) { cpu.unibus.rl11.rl02[i].close(); cpu.unibus.rl11.rl02[i] = File(); }
@@ -166,10 +136,12 @@ void perform_load_snapshot(String dir) {
         if (current_options.rk_disks[i] >= 0) {
             String path = "/pdp11/" + Fnames[current_options.rk_disks[i]];
             cpu.unibus.rk11.rk05[i] = SD.open(path.c_str(), "rb+");
+            if (cpu.unibus.rk11.rk05[i]) Serial.printf("   RK%d: %s\n", i, path.c_str());
         }
         if (current_options.rl_disks[i] >= 0) {
             String path = "/pdp11/" + Fnames[current_options.rl_disks[i]];
             cpu.unibus.rl11.rl02[i] = SD.open(path.c_str(), "rb+");
+            if (cpu.unibus.rl11.rl02[i]) Serial.printf("   RL%d: %s\n", i, path.c_str());
         }
     }
     
@@ -181,12 +153,27 @@ void perform_load_snapshot(String dir) {
         RLTYPE = 035;
     }
     
+    Serial.println(" - Loading CPU/Memory state...");
     cpu.loadSnapshot(dir.c_str());
     
-    canvas.fillSprite(0);
-    canvas.setCursor(0, 0);
-    canvas.printf("[SNAPSHOT LOADED]\r\n");
+    // Restore screen state
+    File f_scr = SD.open((dir + "/screen.bin").c_str(), "r");
+    if (f_scr) {
+        f_scr.read((uint8_t*)canvas.getBuffer(), 240 * 135 / 8);
+        int16_t curX, curY;
+        if (f_scr.read((uint8_t*)&curX, sizeof(curX)) == sizeof(curX)) {
+            if (f_scr.read((uint8_t*)&curY, sizeof(curY)) == sizeof(curY)) {
+                canvas.setCursor(curX, curY);
+            }
+        }
+        f_scr.close();
+        Serial.println(" - Screen state restored.");
+    }
+
+    cpu.wtstate = false; // Force resume!
+    
     canvas.pushSprite(0, 0);
+    Serial.println(" - Snapshot load complete.");
     delay(500);
 }
 
@@ -233,8 +220,10 @@ static void scanDiskImages(fs::FS &fs, const char *dirname, const char *basedir)
                               (unsigned long)file.size());
             }
         }
+        file.close();
         file = root.openNextFile();
     }
+    root.close();
 }
 
 // ── setup() ──────────────────────────────────────────────────────────────────
@@ -284,7 +273,7 @@ void setup() {
     // Cardputer SD SPI pins: SCK=40, MISO=39, MOSI=14, CS=12
     // These are non-default, so SPI must be explicitly initialized first.
     SPI.begin(40, 39, 14, 12);  // SCK, MISO, MOSI, CS
-    if (!SD.begin(12, SPI, 25000000)) {
+    if (!SD.begin(12, SPI, 25000000, "/sd", 7)) {
         Serial.println("SD Card mount failed!");
         M5Cardputer.Display.setTextColor(TFT_RED, BLACK);
         M5Cardputer.Display.setCursor(4, 4);

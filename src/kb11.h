@@ -13,7 +13,7 @@ class KB11 {
 
     void trapat(uint16_t vec);
 
-    void saveSnapshot(const char* dir);
+    bool saveSnapshot(const char* dir);
     void loadSnapshot(const char* dir);
 
 

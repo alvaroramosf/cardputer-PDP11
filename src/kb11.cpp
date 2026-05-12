@@ -912,9 +912,10 @@ void KB11::trapat(uint16_t vec) {
     wtstate = false;
 }
 
-void KB11::saveSnapshot(const char* dir) {
+bool KB11::saveSnapshot(const char* dir) {
+    bool ok = true;
     String path_cpu = String(dir) + "/cpu.bin";
-    File f_cpu = SD.open(path_cpu.c_str(), FILE_WRITE);
+    File f_cpu = SD.open(path_cpu.c_str(), "w");
     if (f_cpu) {
         f_cpu.write((uint8_t*)&PC, sizeof(PC));
         f_cpu.write((uint8_t*)&PSW, sizeof(PSW));
@@ -928,24 +929,24 @@ void KB11::saveSnapshot(const char* dir) {
         f_cpu.write((uint8_t*)&rflag, sizeof(rflag));
         f_cpu.write((uint8_t*)&wtstate, sizeof(wtstate));
         f_cpu.close();
-    }
+    } else { Serial.println("F-CPU fail"); ok = false; }
 
     String path_mmu = String(dir) + "/mmu.bin";
-    File f_mmu = SD.open(path_mmu.c_str(), FILE_WRITE);
+    File f_mmu = SD.open(path_mmu.c_str(), "w");
     if (f_mmu) {
         f_mmu.write((uint8_t*)&mmu, sizeof(KT11));
         f_mmu.close();
-    }
+    } else { Serial.println("F-MMU fail"); ok = false; }
 
     String path_umap = String(dir) + "/umap.bin";
-    File f_umap = SD.open(path_umap.c_str(), FILE_WRITE);
+    File f_umap = SD.open(path_umap.c_str(), "w");
     if (f_umap) {
         f_umap.write((uint8_t*)unibus.umap, sizeof(unibus.umap));
         f_umap.close();
-    }
+    } else { Serial.println("F-UMAP fail"); ok = false; }
 
     String path_mem = String(dir) + "/mem.bin";
-    File f_mem = SD.open(path_mem.c_str(), FILE_WRITE);
+    File f_mem = SD.open(path_mem.c_str(), "w");
     if (f_mem) {
         int num_pages = (mmu.SR[3] & 020) ? (MEMSIZE22 / 32768) : (MEMSIZE / 32768);
         if ((mmu.SR[3] & 020) && (MEMSIZE22 % 32768 != 0)) num_pages++;
@@ -957,10 +958,10 @@ void KB11::saveSnapshot(const char* dir) {
             }
         }
         f_mem.close();
-    }
+    } else { Serial.println("F-MEM fail"); ok = false; }
 
     String path_dev = String(dir) + "/devices.bin";
-    File f_dev = SD.open(path_dev.c_str(), FILE_WRITE);
+    File f_dev = SD.open(path_dev.c_str(), "w");
     if (f_dev) {
         unibus.rk11.saveSnapshot(f_dev);
         unibus.rl11.saveSnapshot(f_dev);
@@ -968,13 +969,15 @@ void KB11::saveSnapshot(const char* dir) {
         unibus.cons.saveSnapshot(f_dev);
         unibus.dl11.saveSnapshot(f_dev);
         f_dev.close();
-    }
+    } else { Serial.println("F-DEV fail"); ok = false; }
+    
+    return ok;
 }
 
 
 void KB11::loadSnapshot(const char* dir) {
     String path_cpu = String(dir) + "/cpu.bin";
-    File f_cpu = SD.open(path_cpu.c_str(), FILE_READ);
+    File f_cpu = SD.open(path_cpu.c_str(), "r");
     if (f_cpu) {
         f_cpu.read((uint8_t*)&PC, sizeof(PC));
         f_cpu.read((uint8_t*)&PSW, sizeof(PSW));
@@ -988,27 +991,31 @@ void KB11::loadSnapshot(const char* dir) {
         f_cpu.read((uint8_t*)&rflag, sizeof(rflag));
         f_cpu.read((uint8_t*)&wtstate, sizeof(wtstate));
         f_cpu.close();
+        Serial.println("   - CPU state loaded.");
     }
 
     String path_mmu = String(dir) + "/mmu.bin";
-    File f_mmu = SD.open(path_mmu.c_str(), FILE_READ);
+    File f_mmu = SD.open(path_mmu.c_str(), "r");
     if (f_mmu) {
         f_mmu.read((uint8_t*)&mmu, sizeof(KT11));
         f_mmu.close();
+        Serial.println("   - MMU state loaded.");
     }
 
     String path_umap = String(dir) + "/umap.bin";
-    File f_umap = SD.open(path_umap.c_str(), FILE_READ);
+    File f_umap = SD.open(path_umap.c_str(), "r");
     if (f_umap) {
         f_umap.read((uint8_t*)unibus.umap, sizeof(unibus.umap));
         f_umap.close();
+        Serial.println("   - Unibus map loaded.");
     }
 
     String path_mem = String(dir) + "/mem.bin";
-    File f_mem = SD.open(path_mem.c_str(), FILE_READ);
+    File f_mem = SD.open(path_mem.c_str(), "r");
     if (f_mem) {
         int num_pages = 0;
         f_mem.read((uint8_t*)&num_pages, sizeof(num_pages));
+        Serial.printf("   - Loading %d memory pages...\n", num_pages);
         for (int i = 0; i < num_pages; i++) {
             if (unibus.core_pages[i]) {
                 f_mem.read((uint8_t*)unibus.core_pages[i], 32768);
@@ -1017,10 +1024,11 @@ void KB11::loadSnapshot(const char* dir) {
             }
         }
         f_mem.close();
+        Serial.println("   - Memory loaded.");
     }
 
     String path_dev = String(dir) + "/devices.bin";
-    File f_dev = SD.open(path_dev.c_str(), FILE_READ);
+    File f_dev = SD.open(path_dev.c_str(), "r");
     if (f_dev) {
         unibus.rk11.loadSnapshot(f_dev);
         unibus.rl11.loadSnapshot(f_dev);
@@ -1028,6 +1036,7 @@ void KB11::loadSnapshot(const char* dir) {
         unibus.cons.loadSnapshot(f_dev);
         unibus.dl11.loadSnapshot(f_dev);
         f_dev.close();
+        Serial.println("   - Device registers loaded.");
     }
 }
 

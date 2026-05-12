@@ -286,20 +286,20 @@ cardpPDP11/
 
 ## Changelog
 
-### v0.1.3
-- **feat:** Multi-disk support for RK11 (connect up to 4 RK05 drives simultaneously).
-- **feat:** Folder navigation in the disk selection menu (recursive browser).
-- **feat:** G0 button exit propagation — pressing G0 now exits back to the emulator from any submenu.
-- **fix:** Corrected RKDS (status) and RKDA (drive selection) logic for multi-drive compatibility.
-- **refactor:** Reorganized UNIX V6 images to separate 11/40 and 11/45 (Supervisor mode) versions.
+### v0.1.5
+- **feat: Main Menu Battery Info** — Moved battery status to the main menu for easier access.
+- **fix: Snapshot Resume** — Fixed an issue where snapshots would load in a paused state. The CPU now resumes automatically after loading.
+- **fix: Disk LED Visibility** — Implemented a timer for the disk activity LED to ensure flashes are visible to the human eye.
 
 ### v0.1.2
-- **feat:** CPU model selector — choose between PDP-11/40 (18-bit) and PDP-11/23 (22-bit F-11) from the Options Menu
-- **fix:** RL11 boot ROM had wrong CSR address (`0174400` → `0774400`); RL02/RL01 images now boot correctly
-- **fix:** Boot disk verification now checks the actual boot file (RL when booting RL) instead of always checking RK
-- **refactor:** Disk images moved to `/pdp11/` on SD card; recursive scan supports subdirectories (`pdp11-40/`, `pdp11-23/`)
-- **refactor:** Remove custom ODT monitor (pending hardware-faithful F-11 ODT implementation)
-- **refactor:** G0 button opens Options Menu directly (no intermediate ODT layer)
+- **feat: Snapshot System** — Save and load machine state (CPU, memory, devices) directly to SD. Includes a manager to rename and delete snapshots.
+- **feat: Ambient Sounds** — Simulated disk head "clacks" on seek and background fan hum (toggleable in settings).
+- **feat: System Reset** — Reboots the emulator into "boot mode" (initial menu) to allow changing disks/settings.
+- **feat: Multi-disk RK11** — Connect up to 4 RK05 drives simultaneously.
+- **feat: Recursive Disk Browser** — Navigate folders on SD to organize your disk images.
+- **feat: CPU Model Selector** — Choose between PDP-11/40 (18-bit) and PDP-11/23 (22-bit F-11) from the menu.
+- **fix: RL11 Boot ROM** — Corrected CSR address (`0174400` → `0774400`); RL02/RL01 images now boot correctly.
+- **refactor: G0 Menu Propagation** — Pressing G0 now exits back to the emulator from any submenu.
 
 ### v0.1.1
 - ODT-style monitor mode (register/memory inspect and modify)

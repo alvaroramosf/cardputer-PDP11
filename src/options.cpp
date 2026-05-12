@@ -728,7 +728,7 @@ static void menuSystemInfo() {
             uint64_t sd_used  = SD.usedBytes()  / (1024ULL * 1024ULL);
             
             M5Cardputer.Display.setCursor(4, 20);
-            M5Cardputer.Display.printf("Version:      0.1.3\n");
+            M5Cardputer.Display.printf("Version:      0.1.5\n");
             M5Cardputer.Display.setCursor(4, 31);
             M5Cardputer.Display.printf("CPU Model:    %s\n",
                 current_options.cpu_model == CPU_PDP1123 ? "PDP-11/23" : "PDP-11/40");
@@ -822,7 +822,7 @@ static void menuEmulationSettings() {
 static void menuCardputerSettings() {
     int sel = 0;
     bool redraw = true;
-    int num_items = 4;
+    int num_items = 6;
     while(true) {
         if (redraw) {
             const char* items[] = {
@@ -831,11 +831,10 @@ static void menuCardputerSettings() {
                 "Terminal Font Size",
                 "Disk Activity LED",
                 "Disk Seek Sounds",
-                "Fan Simulation",
-                "Battery Status"
+                "Fan Simulation"
             };
             drawMenuHeader("Cardputer Settings");
-            drawMenuList(7, sel, items);
+            drawMenuList(6, sel, items);
             drawMenuFooter("; Up  . Down  Ent Select  Esc Back");
             redraw = false;
         }
@@ -849,7 +848,7 @@ static void menuCardputerSettings() {
             auto status = M5Cardputer.Keyboard.keysState();
             bool handled = false;
             bool esc_pressed = status.del;
-            int num_items = 7;
+            int num_items = 6;
             for (auto ch : status.word) {
                 if (ch == ';') { if (sel > 0) { sel--; redraw = true; handled = true; } }
                 if (ch == '.') { if (sel < num_items - 1) { sel++; redraw = true; handled = true; } }
@@ -863,7 +862,6 @@ static void menuCardputerSettings() {
                     case 3: menuDiskLED(); break;
                     case 4: menuDiskSounds(); break;
                     case 5: menuFanSound(); break;
-                    case 6: menuBattery(); break;
                 }
                 redraw = true;
             }
@@ -875,40 +873,77 @@ static void menuCardputerSettings() {
         delay(20);
     }
 }
-
 void createSnapshot() {
     SD.mkdir("/snapshots");
     
     // Find next snapshot number
-    int snap_idx = 0;
-    String snap_dir;
-    while (true) {
-        snap_dir = String("/snapshots/snap_") + snap_idx;
-        if (!SD.exists(snap_dir.c_str())) {
-            break;
-        }
-        snap_idx++;
+    int next_num = 1;
+    while (SD.exists("/snapshots/snap_" + String(next_num))) {
+        next_num++;
+        if (next_num > 99) break; // Safety limit
     }
-    SD.mkdir(snap_dir.c_str());
+    String snap_dir = "/snapshots/snap_" + String(next_num);
+    
+    drawMenuHeader("Creating Snapshot...");
+    M5Cardputer.Display.setCursor(10, 40);
+    M5Cardputer.Display.printf("Folder: %s", snap_dir.c_str());
+
+    if (!SD.exists("/snapshots")) {
+        if (!SD.mkdir("/snapshots")) {
+            Serial.println("Error: Could not create /snapshots directory");
+        }
+    }
+
+    if (!SD.mkdir(snap_dir.c_str())) {
+        Serial.printf("Error: Could not create %s\n", snap_dir.c_str());
+        // If it already exists but SD.exists was weird, we continue anyway
+    }
 
     // Save current options
-    File f_cfg = SD.open((snap_dir + "/config.bin").c_str(), FILE_WRITE);
+    bool ok = true;
+    File f_cfg = SD.open((snap_dir + "/config.bin").c_str(), "w");
     if (f_cfg) {
         f_cfg.write((uint8_t*)&current_options, sizeof(current_options));
         f_cfg.close();
+        Serial.println("Config saved.");
+    } else {
+        Serial.println("Failed to open config.bin for writing");
+        ok = false;
     }
 
     // Save CPU state
     extern KB11 cpu;
-    cpu.saveSnapshot(snap_dir.c_str());
+    if (!cpu.saveSnapshot(snap_dir.c_str())) {
+        ok = false;
+    }
 
-    // Show message
-    M5Cardputer.Display.fillRect(0, 135 - 20, 240, 20, TFT_DARKGREEN);
-    M5Cardputer.Display.setTextColor(TFT_WHITE, TFT_DARKGREEN);
-    M5Cardputer.Display.setCursor(4, 135 - 16);
-    M5Cardputer.Display.printf("Snapshot saved: snap_%d", snap_idx);
+    // Save screen state
+    File f_scr = SD.open((snap_dir + "/screen.bin").c_str(), "w");
+    if (f_scr) {
+        extern LGFX_Sprite canvas;
+        f_scr.write((uint8_t*)canvas.getBuffer(), 240 * 135 / 8);
+        int16_t curX = canvas.getCursorX();
+        int16_t curY = canvas.getCursorY();
+        f_scr.write((uint8_t*)&curX, sizeof(curX));
+        f_scr.write((uint8_t*)&curY, sizeof(curY));
+        f_scr.close();
+    } else {
+        ok = false;
+    }
+
+    if (ok) {
+        M5Cardputer.Display.fillRect(0, 135 - 20, 240, 20, TFT_DARKGREEN);
+        M5Cardputer.Display.setTextColor(TFT_WHITE, TFT_DARKGREEN);
+        M5Cardputer.Display.setCursor(4, 135 - 16);
+        M5Cardputer.Display.printf("Snapshot saved: snap_%d", next_num);
+    } else {
+        M5Cardputer.Display.fillRect(0, 135 - 20, 240, 20, TFT_RED);
+        M5Cardputer.Display.setTextColor(TFT_WHITE, TFT_RED);
+        M5Cardputer.Display.setCursor(4, 135 - 16);
+        M5Cardputer.Display.printf("SAVE FAILED!");
+    }
     M5Cardputer.update();
-    delay(1500);
+    delay(2000);
 }
 
 void deleteRecursive(const char* path) {
@@ -1146,13 +1181,14 @@ void openOptionsMenu() {
     EmulatorOptions backup = current_options;
     
     bool redraw = true;
-    int num_items = 7;
+    int num_items = 8;
     while(true) {
         if (redraw) {
             const char* items[] = {
                 "Emulation Settings",
                 "Cardputer Settings",
                 "System Info",
+                "Battery Status",
                 "Create Snapshot",
                 "Load Snapshot",
                 "Manage Snapshots",
@@ -1182,10 +1218,11 @@ void openOptionsMenu() {
                     case 0: menuEmulationSettings(); break;
                     case 1: menuCardputerSettings(); break;
                     case 2: menuSystemInfo(); break;
-                    case 3: createSnapshot(); break;
-                    case 4: loadSnapshotMenu(); break;
-                    case 5: menuManageSnapshots(); break;
-                    case 6:
+                    case 3: menuBattery(); break;
+                    case 4: createSnapshot(); break;
+                    case 5: loadSnapshotMenu(); break;
+                    case 6: menuManageSnapshots(); break;
+                    case 7:
                         request_soft_reset = true;
                         waitForKeyRelease();
                         return;
@@ -1202,7 +1239,7 @@ void openOptionsMenu() {
                     if (backup.rk_disks[i] != current_options.rk_disks[i]) disk_changed = true;
                     if (backup.rl_disks[i] != current_options.rl_disks[i]) disk_changed = true;
                 }
-                if (disk_changed || backup.cpu_model != current_options.cpu_model || signal_exit) {
+                if (disk_changed || backup.cpu_model != current_options.cpu_model || request_soft_reset) {
                     request_soft_reset = true;
                 }
                 waitForKeyRelease();
