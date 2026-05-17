@@ -667,16 +667,22 @@ static void menuDiskSounds() {
         M5Cardputer.update();
         if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
             auto status = M5Cardputer.Keyboard.keysState();
+            bool esc_pressed = status.del;
             for (auto ch : status.word) {
                 if (ch == ';') { if (sel > 0) { sel--; redraw = true; } }
                 if (ch == '.') { if (sel < 1) { sel++; redraw = true; } }
+                if (ch == 27 || ch == '`') esc_pressed = true;
             }
             if (status.enter) {
                 current_options.disk_sounds = (sel == 0);
                 saveOptions();
+                waitForKeyRelease();
                 return;
             }
-            if (status.del) return;
+            if (esc_pressed) {
+                waitForKeyRelease();
+                return;
+            }
         }
         delay(20);
     }
@@ -696,16 +702,22 @@ static void menuFanSound() {
         M5Cardputer.update();
         if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
             auto status = M5Cardputer.Keyboard.keysState();
+            bool esc_pressed = status.del;
             for (auto ch : status.word) {
                 if (ch == ';') { if (sel > 0) { sel--; redraw = true; } }
                 if (ch == '.') { if (sel < 1) { sel++; redraw = true; } }
+                if (ch == 27 || ch == '`') esc_pressed = true;
             }
             if (status.enter) {
                 current_options.fan_sound = (sel == 0);
                 saveOptions();
+                waitForKeyRelease();
                 return;
             }
-            if (status.del) return;
+            if (esc_pressed) {
+                waitForKeyRelease();
+                return;
+            }
         }
         delay(20);
     }
@@ -728,7 +740,7 @@ static void menuSystemInfo() {
             uint64_t sd_used  = SD.usedBytes()  / (1024ULL * 1024ULL);
             
             M5Cardputer.Display.setCursor(4, 20);
-            M5Cardputer.Display.printf("Version:      0.1.5\n");
+            M5Cardputer.Display.printf("Version:      1.0.0\n");
             M5Cardputer.Display.setCursor(4, 31);
             M5Cardputer.Display.printf("CPU Model:    %s\n",
                 current_options.cpu_model == CPU_PDP1123 ? "PDP-11/23" : "PDP-11/40");

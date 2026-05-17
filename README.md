@@ -242,6 +242,10 @@ cardpPDP11/
 
 ## Changelog
 
+### v1.0.0
+- **fix: Snapshot Settings Overwriting** — Snapshots now only store/load machine states and connected disks, keeping active text colors, sound toggles, and brightness settings intact.
+- **fix: Escape Key Support** — Submenus for "Disk Seek Sounds" and "Fan Simulation" can now be exited using the Escape/Back key.
+
 ### v0.1.5
 - **feat: Main Menu Battery Info** — Moved battery status to the main menu.
 - **fix: Snapshot Resume** — CPU now resumes automatically after loading.

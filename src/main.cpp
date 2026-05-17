@@ -115,9 +115,20 @@ void perform_load_snapshot(String dir) {
     Serial.printf("Loading snapshot from: %s\n", dir.c_str());
     File f_cfg = SD.open((dir + "/config.bin").c_str(), "r");
     if (f_cfg) {
-        f_cfg.read((uint8_t*)&current_options, sizeof(current_options));
+        EmulatorOptions loaded_options;
+        if (f_cfg.read((uint8_t*)&loaded_options, sizeof(loaded_options)) == sizeof(loaded_options)) {
+            // Restore only machine state and connected disks, leaving UI settings intact
+            for (int i = 0; i < 4; i++) {
+                current_options.rk_disks[i] = loaded_options.rk_disks[i];
+                current_options.rl_disks[i] = loaded_options.rl_disks[i];
+            }
+            current_options.cpu_model = loaded_options.cpu_model;
+            current_options.boot_device = loaded_options.boot_device;
+            Serial.println(" - Config loaded (machine state & disks only).");
+        } else {
+            Serial.println(" - Config read failed or invalid size!");
+        }
         f_cfg.close();
-        Serial.println(" - Config loaded.");
     } else {
         Serial.println(" - Config NOT found!");
     }
