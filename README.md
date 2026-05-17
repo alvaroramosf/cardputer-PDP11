@@ -1,4 +1,4 @@
-# cardpPDP11 — PDP-11 Emulator for M5Stack Cardputer
+# cardPDP11 — PDP-11 Emulator for M5Stack Cardputer
 
 A PDP-11/40 and PDP-11/23 emulator running on the **M5Stack Cardputer** (ESP32-S3).
 Boot Unix V6, RT-11, RSX-11/M or RSTS/E directly from an SD card —
