@@ -12,7 +12,11 @@ const uint32_t IOBASE_18BIT = 0760000;
 const uint32_t IOBASE_22BIT = 017760000;
 
 const uint32_t MEMSIZE22 = (4096-256) * 1024;
-const uint32_t MEMSIZE = (256 - 8) * 1024; // Maximum 18-bit RAM (248KB)
+#ifdef PLATFORMIO
+  const uint32_t MEMSIZE = (256 - 8) * 1024; // Maximum 18-bit RAM (248KB)
+#else
+  const uint32_t MEMSIZE = 224 * 1024; // 224 KB is a limit with Arduino IDE
+#endif
 const uint32_t MEMMAX = 4096 * 1024;
 
 class UNIBUS {
