@@ -268,18 +268,6 @@ void setup() {
     delay(500);
     Serial.println("Cardputer PDP-11 starting...");
 
-    // Canvas for the emulator terminal (1-bit color depth to save ~60KB RAM)
-    canvas.setColorDepth(1);
-    canvas.createSprite(240, 135);
-    canvas.setTextScroll(true);
-    canvas.setFont(&fonts::Font0);  // 6×8 mono → ~39 col × 16 rows
-    apply_canvas_font_size();
-    update_canvas_colors();
-    canvas.fillSprite(0);
-    canvas.pushSprite(0, 0);
-    
-    M5Cardputer.Speaker.setVolume(128);
-
     // Mount SD card
     // Cardputer SD SPI pins: SCK=40, MISO=39, MOSI=14, CS=12
     // These are non-default, so SPI must be explicitly initialized first.
@@ -293,6 +281,22 @@ void setup() {
         M5Cardputer.Display.print("Check: FAT32, card seated");
         while (1) delay(1000);
     }
+
+    // Allocate UNIBUS memory while large blocks are free
+    cpu.unibus.reset(); 
+
+    // Canvas for the emulator terminal (1-bit color depth to save ~60KB RAM)
+    canvas.setColorDepth(1);
+    canvas.createSprite(240, 135);
+    canvas.setTextScroll(true);
+    canvas.setFont(&fonts::Font0);  // 6×8 mono → ~39 col × 16 rows
+    apply_canvas_font_size();
+    update_canvas_colors();
+    canvas.fillSprite(0);
+    canvas.pushSprite(0, 0);
+    
+    M5Cardputer.Speaker.setVolume(128);
+
     Serial.printf("SD: %llu MB  Free heap: %d  Free PSRAM: %lu\r\n",
                   SD.totalBytes() / (1024ULL * 1024ULL),
                   ESP.getFreeHeap(),
